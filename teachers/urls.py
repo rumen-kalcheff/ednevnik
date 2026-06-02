@@ -1,0 +1,24 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    # Оценки
+    path('grades/', views.grade_list, name='grade_list'),
+    path('grades/add/', views.grade_add, name='grade_add'),
+    path('grades/<int:pk>/edit/', views.grade_edit, name='grade_edit'),
+    path('grades/<int:pk>/delete/', views.grade_delete, name='grade_delete'),
+    # Отсъствия
+    path('absences/', views.absence_list, name='absence_list'),
+    path('absences/add/', views.absence_add, name='absence_add'),
+    path('absences/<int:pk>/edit/', views.absence_edit, name='absence_edit'),
+    path('absences/<int:pk>/delete/', views.absence_delete, name='absence_delete'),
+    # Материали
+    path('materials/', views.material_list, name='teacher_material_list'),
+    path('materials/upload/', views.material_upload, name='material_upload'),
+    path('materials/<int:pk>/delete/', views.material_delete, name='material_delete'),
+    # Разписание и статистики
+    path('schedule/', views.schedule, name='teacher_schedule'),
+    path('statistics/', views.statistics, name='teacher_statistics'),
+    # AJAX
+    path('api/students-by-class/', views.students_by_class, name='students_by_class'),
+]

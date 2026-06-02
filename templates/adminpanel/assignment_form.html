@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Ново назначение{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-diagram-3"></i> Ново назначение</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Учител</label>
+                        <select name="teacher" class="form-select" required>
+                            <option value="">-- Избери учител --</option>
+                            {% for t in teachers %}
+                            <option value="{{ t.pk }}">{{ t.get_full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Клас</label>
+                        <select name="school_class" class="form-select" required>
+                            <option value="">-- Избери клас --</option>
+                            {% for c in classes %}
+                            <option value="{{ c.pk }}">{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Предмет</label>
+                        <select name="subject" class="form-select" required>
+                            <option value="">-- Избери предмет --</option>
+                            {% for s in subjects %}
+                            <option value="{{ s.pk }}">{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Назначи
+                        </button>
+                        <a href="{% url 'assignment_list' %}" class="btn btn-secondary">Отказ</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} потребител{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person"></i> {{ action }} потребител</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Потребителско име</label>
+                        <input type="text" name="username" class="form-control"
+                               value="{{ obj.username|default:'' }}"
+                               {% if obj %}readonly{% endif %} required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Име</label>
+                        <input type="text" name="first_name" class="form-control"
+                               value="{{ obj.first_name|default:'' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Фамилия</label>
+                        <input type="text" name="last_name" class="form-control"
+                               value="{{ obj.last_name|default:'' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Роля</label>
+                        <select name="role" class="form-select" required>
+                            <option value="">-- Избери --</option>
+                            <option value="admin" {% if obj.role == 'admin' %}selected{% endif %}>Администратор</option>
+                            <option value="teacher" {% if obj.role == 'teacher' %}selected{% endif %}>Учител</option>
+                            <option value="student" {% if obj.role == 'student' %}selected{% endif %}>Ученик</option>
+                            <option value="parent" {% if obj.role == 'parent' %}selected{% endif %}>Родител</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="class-field" style="display:none;">
+                        <label class="form-label">Клас</label>
+                        <select name="school_class" class="form-select">
+                            <option value="">— Без клас —</option>
+                            {% for c in classes %}
+                            <option value="{{ c.pk }}"
+                                {% if student_profile.school_class_id == c.pk %}selected{% endif %}>
+                                {{ c.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Парола {% if obj %}<small class="text-muted">(остави празно за без промяна)</small>{% endif %}
+                        </label>
+                        <input type="password" name="password" class="form-control"
+                               {% if not obj %}required{% endif %}>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> {{ action }}
+                        </button>
+                        <a href="{% url 'user_list' %}" class="btn btn-secondary">Отказ</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const roleSelect = document.querySelector('select[name="role"]');
+    const classField = document.getElementById('class-field');
+    function toggleClass() {
+        classField.style.display = roleSelect.value === 'student' ? 'block' : 'none';
+    }
+    roleSelect.addEventListener('change', toggleClass);
+    toggleClass();
+</script>
+{% endblock %}

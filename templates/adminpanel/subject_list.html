@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Учебни предмети{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-journal-bookmark"></i> Учебни предмети</h4>
+    <a href="{% url 'subject_create' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg"></i> Нов предмет
+    </a>
+</div>
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Предмет</th>
+                    <th class="text-end">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in subjects %}
+                <tr>
+                    <td>{{ s.name }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'subject_edit' s.pk %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="{% url 'subject_delete' s.pk %}" class="btn btn-sm btn-outline-danger ms-1">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="2" class="text-center text-muted py-4">Няма предмети.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

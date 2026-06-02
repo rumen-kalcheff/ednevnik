@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Редактиране на оценка{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-pencil"></i> Редактиране на оценка</h5></div>
+            <div class="card-body">
+                <p class="text-muted">{{ grade.student.user.get_full_name }} — {{ grade.subject }}</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col mb-3">
+                            <label class="form-label">Оценка</label>
+                            <select name="value" class="form-select" required>
+                                {% for val, label in grade_values %}
+                                <option value="{{ val }}" {% if grade.value == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col mb-3">
+                            <label class="form-label">Вид</label>
+                            <select name="grade_type" class="form-select" required>
+                                {% for val, label in grade_types %}
+                                <option value="{{ val }}" {% if grade.grade_type == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Дата</label>
+                        <input type="date" name="date" class="form-control" value="{{ grade.date }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Забележка</label>
+                        <input type="text" name="note" class="form-control" value="{{ grade.note }}">
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Запази</button>
+                        <a href="{% url 'grade_list' %}" class="btn btn-secondary">Отказ</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

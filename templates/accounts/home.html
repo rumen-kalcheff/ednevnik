@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Електронен дневник</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .hero { background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="{% url 'home' %}">
+            <i class="bi bi-book"></i> Електронен дневник
+        </a>
+        <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm ms-auto">
+            <i class="bi bi-box-arrow-in-right"></i> Вход
+        </a>
+    </div>
+</nav>
+
+<div class="hero text-white py-5">
+    <div class="container text-center py-4">
+        <i class="bi bi-book-half" style="font-size: 4rem;"></i>
+        <h1 class="fw-bold mt-3">Електронен дневник</h1>
+        <p class="lead mb-4">Уеб базирана система за управление на учебния процес —<br>оценки, отсъствия, разписание и учебни материали на едно място.</p>
+        <a href="{% url 'login' %}" class="btn btn-light btn-lg px-5">
+            <i class="bi bi-box-arrow-in-right"></i> Вход в системата
+        </a>
+    </div>
+</div>
+
+<div class="container py-5">
+    <h3 class="text-center fw-bold mb-5">Функционалности по роля</h3>
+    <div class="row g-4">
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm text-center p-3">
+                <i class="bi bi-mortarboard fs-1 text-primary mb-3"></i>
+                <h5 class="fw-bold">Ученик</h5>
+                <ul class="list-unstyled text-muted small text-start mt-2">
+                    <li><i class="bi bi-check2 text-success me-1"></i>Преглед на оценки</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Преглед на отсъствия</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Седмично разписание</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Учебни материали</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Графики за успеваемост</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Информация за класа</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm text-center p-3">
+                <i class="bi bi-house-heart fs-1 text-danger mb-3"></i>
+                <h5 class="fw-bold">Родител</h5>
+                <ul class="list-unstyled text-muted small text-start mt-2">
+                    <li><i class="bi bi-check2 text-success me-1"></i>Оценки на детето</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Отсъствия на детето</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Разписание на детето</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Учебни материали</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Графики за успеваемост</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Поддръжка на повече деца</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm text-center p-3">
+                <i class="bi bi-person-workspace fs-1 text-success mb-3"></i>
+                <h5 class="fw-bold">Учител</h5>
+                <ul class="list-unstyled text-muted small text-start mt-2">
+                    <li><i class="bi bi-check2 text-success me-1"></i>Въвеждане на оценки</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Въвеждане на отсъствия</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Качване на материали</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Седмично разписание</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Статистики за класа</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm text-center p-3">
+                <i class="bi bi-shield-check fs-1 text-warning mb-3"></i>
+                <h5 class="fw-bold">Администратор</h5>
+                <ul class="list-unstyled text-muted small text-start mt-2">
+                    <li><i class="bi bi-check2 text-success me-1"></i>Управление на потребители</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Управление на класове</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Управление на предмети</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Назначения учител→клас</li>
+                    <li><i class="bi bi-check2 text-success me-1"></i>Свързване родител↔ученик</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<footer class="bg-light border-top py-3 text-center text-muted small">
+    Електронен дневник — Дипломна работа, ТУ-София, ФКСТ
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

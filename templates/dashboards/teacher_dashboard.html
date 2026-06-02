@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}Учител — Табло{% endblock %}
+{% block content %}
+<h3 class="mb-4"><i class="bi bi-person-workspace"></i> Учителско табло</h3>
+<div class="row g-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-pencil-square fs-1"></i>
+                <h5 class="card-title mt-2">Оценки</h5>
+                <p class="card-text small">Въвеждане и редактиране</p>
+                <a href="{% url 'grade_list' %}" class="btn btn-light btn-sm">Отвори</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-calendar-x fs-1"></i>
+                <h5 class="card-title mt-2">Отсъствия</h5>
+                <p class="card-text small">Въвеждане и редактиране</p>
+                <a href="{% url 'absence_list' %}" class="btn btn-light btn-sm">Отвори</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-folder-plus fs-1"></i>
+                <h5 class="card-title mt-2">Материали</h5>
+                <p class="card-text small">Качване на учебни материали</p>
+                <a href="{% url 'teacher_material_list' %}" class="btn btn-light btn-sm">Отвори</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-calendar3 fs-1"></i>
+                <h5 class="card-title mt-2">Разписание</h5>
+                <p class="card-text small">Седмично разписание</p>
+                <a href="{% url 'teacher_schedule' %}" class="btn btn-light btn-sm">Преглед</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-bar-chart fs-1"></i>
+                <h5 class="card-title mt-2">Статистики</h5>
+                <p class="card-text small">Среден успех по класове</p>
+                <a href="{% url 'teacher_statistics' %}" class="btn btn-light btn-sm">Преглед</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

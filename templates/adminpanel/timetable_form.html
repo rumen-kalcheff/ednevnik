@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}Добави час{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-calendar-plus"></i> Добави час в разписанието</h4>
+    <a href="{% url 'timetable_list' %}{% if selected_class %}?class={{ selected_class }}{% endif %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Назад
+    </a>
+</div>
+
+<div class="card shadow-sm" style="max-width: 500px;">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="class_filter" value="{{ selected_class }}">
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Клас</label>
+                <select name="class_filter" class="form-select" onchange="this.form.action='{% url 'timetable_add' %}'; this.form.submit();">
+                    <option value="">— Избери клас —</option>
+                    {% for c in classes %}
+                    <option value="{{ c.pk }}" {% if selected_class == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+                <small class="text-muted">Изборът на клас филтрира назначенията по-долу.</small>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Назначение (учител → предмет)</label>
+                <select name="assignment" class="form-select" required>
+                    <option value="">— Избери —</option>
+                    {% for a in assignments %}
+                    <option value="{{ a.pk }}">{{ a.subject }} — {{ a.teacher.get_full_name }} ({{ a.school_class }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Ден</label>
+                <select name="day_of_week" class="form-select" required>
+                    <option value="">— Избери —</option>
+                    {% for value, label in days %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Час</label>
+                <select name="hour_number" class="form-select" required>
+                    <option value="">— Избери —</option>
+                    {% for value, label in hours %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-plus-lg"></i> Добави
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

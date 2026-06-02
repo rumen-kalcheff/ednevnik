@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Учебни материали{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-folder2-open"></i> Учебни материали</h4>
+    <a href="{% url 'material_upload' %}" class="btn btn-primary btn-sm"><i class="bi bi-upload"></i> Качи материал</a>
+</div>
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr><th>Заглавие</th><th>Предмет</th><th>Клас</th><th>Качен на</th><th class="text-end">Действия</th></tr>
+            </thead>
+            <tbody>
+                {% for m in materials %}
+                <tr>
+                    <td><i class="bi bi-file-earmark"></i> {{ m.title }}</td>
+                    <td>{{ m.subject }}</td>
+                    <td>{{ m.school_class }}</td>
+                    <td>{{ m.uploaded_at|date:"d.m.Y" }}</td>
+                    <td class="text-end">
+                        <a href="{{ m.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank"><i class="bi bi-download"></i></a>
+                        <a href="{% url 'material_delete' m.pk %}" class="btn btn-sm btn-outline-danger ms-1"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">Няма качени материали.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

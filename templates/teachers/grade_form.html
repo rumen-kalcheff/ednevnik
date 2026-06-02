@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}Нова оценка{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-pencil-square"></i> Нова оценка</h5></div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Клас</label>
+                        <select id="class-select" class="form-select" required>
+                            <option value="">-- Избери клас --</option>
+                            {% for c in classes %}<option value="{{ c.pk }}">{{ c.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ученик</label>
+                        <select name="student" id="student-select" class="form-select" required>
+                            <option value="">-- Първо избери клас --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Предмет</label>
+                        <select name="subject" class="form-select" required>
+                            <option value="">-- Избери предмет --</option>
+                            {% for s in subjects %}<option value="{{ s.pk }}">{{ s.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col mb-3">
+                            <label class="form-label">Оценка</label>
+                            <select name="value" class="form-select" required>
+                                {% for val, label in grade_values %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="col mb-3">
+                            <label class="form-label">Вид</label>
+                            <select name="grade_type" class="form-select" required>
+                                {% for val, label in grade_types %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Дата</label>
+                        <input type="date" name="date" class="form-control" value="{{ today }}" max="{{ today }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Забележка <small class="text-muted">(незадължително)</small></label>
+                        <input type="text" name="note" class="form-control">
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Запази</button>
+                        <a href="{% url 'grade_list' %}" class="btn btn-secondary">Отказ</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('class-select').addEventListener('change', function() {
+    const classId = this.value;
+    const studentSelect = document.getElementById('student-select');
+    studentSelect.innerHTML = '<option value="">Зарежда...</option>';
+    if (!classId) return;
+    fetch(`/teacher/api/students-by-class/?class_id=${classId}`)
+        .then(r => r.json())
+        .then(data => {
+            studentSelect.innerHTML = '<option value="">-- Избери ученик --</option>';
+            data.forEach(s => {
+                studentSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+            });
+        });
+});
+</script>
+{% endblock %}
