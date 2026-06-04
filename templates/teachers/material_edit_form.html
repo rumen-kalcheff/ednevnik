@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Редактиране на материал{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-pencil-square"></i> Редактиране на материал</h5></div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Заглавие</label>
+                        <input type="text" name="title" class="form-control" value="{{ material.title }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Предмет</label>
+                        <select name="subject" class="form-select" required>
+                            <option value="">-- Избери --</option>
+                            {% for s in subjects %}
+                            <option value="{{ s.pk }}" {% if s.pk == material.subject_id %}selected{% endif %}>{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Клас</label>
+                        <select name="school_class" class="form-select" required>
+                            <option value="">-- Избери --</option>
+                            {% for c in classes %}
+                            <option value="{{ c.pk }}" {% if c.pk == material.school_class_id %}selected{% endif %}>{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Текущ файл</label>
+                        <div class="form-control-plaintext">
+                            <a href="{{ material.file.url }}" target="_blank"><i class="bi bi-file-earmark"></i> {{ material.file.name|slice:"10:" }}</a>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Описание <small class="text-muted">(незадължително)</small></label>
+                        <textarea name="description" class="form-control" rows="2">{{ material.description }}</textarea>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Запази</button>
+                        <a href="{% url 'teacher_material_list' %}" class="btn btn-secondary">Отказ</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

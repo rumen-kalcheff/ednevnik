@@ -300,6 +300,61 @@ def timetable_delete(request, pk):
     return render(request, 'adminpanel/confirm_delete.html', {'obj': entry, 'type': 'час от разписанието'})
 
 
+# ── Административни справки ───────────────────────────────────
+
+@role_required('admin')
+def admin_statistics(request):
+    import json
+    from django.db.models import Avg, Count
+    from grades.models import Grade, Absence
+    from students.models import StudentProfile
+
+    total_students = StudentProfile.objects.count()
+    total_teachers = User.objects.filter(role='teacher').count()
+    total_parents = User.objects.filter(role='parent').count()
+    total_classes = Class.objects.count()
+    total_subjects = Subject.objects.count()
+    total_grades = Grade.objects.count()
+    total_absences = Absence.objects.count()
+    excused = Absence.objects.filter(absence_type='excused').count()
+    unexcused = Absence.objects.filter(absence_type='unexcused').count()
+    overall_avg = Grade.objects.aggregate(avg=Avg('value'))['avg']
+
+    classes = Class.objects.prefetch_related('students').all()
+    class_stats = []
+    for c in classes:
+        students = StudentProfile.objects.filter(school_class=c)
+        avg = Grade.objects.filter(student__school_class=c).aggregate(avg=Avg('value'))['avg']
+        abs_count = Absence.objects.filter(student__school_class=c).count()
+        class_stats.append({
+            'class': c,
+            'student_count': students.count(),
+            'average': round(avg, 2) if avg else None,
+            'absence_count': abs_count,
+        })
+
+    chart_data = json.dumps({
+        'labels': [s['class'].name for s in class_stats],
+        'averages': [float(s['average']) if s['average'] else None for s in class_stats],
+        'absences': [s['absence_count'] for s in class_stats],
+    })
+
+    return render(request, 'adminpanel/statistics.html', {
+        'total_students': total_students,
+        'total_teachers': total_teachers,
+        'total_parents': total_parents,
+        'total_classes': total_classes,
+        'total_subjects': total_subjects,
+        'total_grades': total_grades,
+        'total_absences': total_absences,
+        'excused': excused,
+        'unexcused': unexcused,
+        'overall_avg': round(overall_avg, 2) if overall_avg else None,
+        'class_stats': class_stats,
+        'chart_data': chart_data,
+    })
+
+
 # ── Помощна функция ───────────────────────────────────────────
 
 def _create_profile(user):

@@ -27,4 +27,6 @@ urlpatterns = [
     path('timetable/', views.timetable_list, name='timetable_list'),
     path('timetable/add/', views.timetable_add, name='timetable_add'),
     path('timetable/<int:pk>/delete/', views.timetable_delete, name='timetable_delete'),
+    # Справки
+    path('statistics/', views.admin_statistics, name='admin_statistics'),
 ]

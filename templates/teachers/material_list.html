@@ -20,6 +20,7 @@
                     <td>{{ m.uploaded_at|date:"d.m.Y" }}</td>
                     <td class="text-end">
                         <a href="{{ m.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank"><i class="bi bi-download"></i></a>
+                        <a href="{% url 'material_edit' m.pk %}" class="btn btn-sm btn-outline-secondary ms-1"><i class="bi bi-pencil"></i></a>
                         <a href="{% url 'material_delete' m.pk %}" class="btn btn-sm btn-outline-danger ms-1"><i class="bi bi-trash"></i></a>
                     </td>
                 </tr>

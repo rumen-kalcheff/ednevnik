@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% block title %}Административни справки{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-bar-chart-line"></i> Административни справки</h4>
+    <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Назад</a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card text-white bg-primary h-100 text-center">
+            <div class="card-body">
+                <i class="bi bi-people fs-2"></i>
+                <div class="fs-3 fw-bold">{{ total_students }}</div>
+                <div class="small">Ученици</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-white bg-success h-100 text-center">
+            <div class="card-body">
+                <i class="bi bi-person-workspace fs-2"></i>
+                <div class="fs-3 fw-bold">{{ total_teachers }}</div>
+                <div class="small">Учители</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-white bg-warning h-100 text-center">
+            <div class="card-body">
+                <i class="bi bi-person-heart fs-2"></i>
+                <div class="fs-3 fw-bold">{{ total_parents }}</div>
+                <div class="small">Родители</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-white bg-secondary h-100 text-center">
+            <div class="card-body">
+                <i class="bi bi-building fs-2"></i>
+                <div class="fs-3 fw-bold">{{ total_classes }}</div>
+                <div class="small">Класове</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-white bg-info h-100 text-center">
+            <div class="card-body">
+                <i class="bi bi-journal-bookmark fs-2"></i>
+                <div class="fs-3 fw-bold">{{ total_subjects }}</div>
+                <div class="small">Предмети</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-white bg-dark h-100 text-center">
+            <div class="card-body">
+                <i class="bi bi-award fs-2"></i>
+                <div class="fs-3 fw-bold">{{ total_grades }}</div>
+                <div class="small">Оценки</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-white bg-danger h-100 text-center">
+            <div class="card-body">
+                <i class="bi bi-calendar-x fs-2"></i>
+                <div class="fs-3 fw-bold">{{ total_absences }}</div>
+                <div class="small">Отсъствия</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-white bg-primary h-100 text-center" style="background-color:#6f42c1 !important;">
+            <div class="card-body">
+                <i class="bi bi-star fs-2"></i>
+                <div class="fs-3 fw-bold">{{ overall_avg|default:"—" }}</div>
+                <div class="small">Среден успех</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header">Среден успех по класове</div>
+            <div class="card-body"><canvas id="avgChart" height="180"></canvas></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header">Отсъствия по класове</div>
+            <div class="card-body"><canvas id="absChart" height="180"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header">Справка по класове</div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Клас</th>
+                    <th>Ученици</th>
+                    <th>Среден успех</th>
+                    <th>Отсъствия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in class_stats %}
+                <tr>
+                    <td>{{ s.class }}</td>
+                    <td>{{ s.student_count }}</td>
+                    <td>{{ s.average|default:"—" }}</td>
+                    <td>{{ s.absence_count }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-4">Няма данни.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header">Отсъствия по вид</div>
+    <div class="card-body d-flex gap-4 align-items-center">
+        <div class="text-center">
+            <div class="fs-4 fw-bold text-success">{{ excused }}</div>
+            <div class="text-muted small">Извинени</div>
+        </div>
+        <div class="text-center">
+            <div class="fs-4 fw-bold text-danger">{{ unexcused }}</div>
+            <div class="text-muted small">Неизвинени</div>
+        </div>
+        <div class="text-center">
+            <div class="fs-4 fw-bold">{{ total_absences }}</div>
+            <div class="text-muted small">Общо</div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const data = {{ chart_data|safe }};
+
+new Chart(document.getElementById('avgChart'), {
+    type: 'bar',
+    data: {
+        labels: data.labels,
+        datasets: [{
+            label: 'Среден успех',
+            data: data.averages,
+            backgroundColor: 'rgba(13,110,253,0.7)',
+        }]
+    },
+    options: { scales: { y: { min: 2, max: 6 } }, plugins: { legend: { display: false } } }
+});
+
+new Chart(document.getElementById('absChart'), {
+    type: 'bar',
+    data: {
+        labels: data.labels,
+        datasets: [{
+            label: 'Отсъствия',
+            data: data.absences,
+            backgroundColor: 'rgba(220,53,69,0.7)',
+        }]
+    },
+    options: { plugins: { legend: { display: false } } }
+});
+</script>
+{% endblock %}

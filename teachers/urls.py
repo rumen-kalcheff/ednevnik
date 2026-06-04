@@ -15,6 +15,7 @@ urlpatterns = [
     # Материали
     path('materials/', views.material_list, name='teacher_material_list'),
     path('materials/upload/', views.material_upload, name='material_upload'),
+    path('materials/<int:pk>/edit/', views.material_edit, name='material_edit'),
     path('materials/<int:pk>/delete/', views.material_delete, name='material_delete'),
     # Разписание и статистики
     path('schedule/', views.schedule, name='teacher_schedule'),

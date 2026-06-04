@@ -27,51 +27,37 @@
 ### Фаза 4 — Учителски модул ✅
 - Apps: `grades`, `materials`
 - Модели: Grade (оценки 2-6, видове: устно/контролно/текуща), Absence (извинено/неизвинено), Material (файлове), Timetable
-- Views в `teachers/views.py`: grade_list/add/edit/delete, absence_list/add/edit/delete, material_list/upload/delete, schedule, statistics, students_by_class (AJAX)
+- Views: grade_list/add/edit/delete, absence_list/add/edit/delete, material_list/upload/edit/delete, schedule, statistics, students_by_class (AJAX)
 - Валидация: дати не могат да бъдат в бъдещето
 - URL prefix: `/teacher/`
 
-## Тестови данни в системата
-- admin / admin123 (роля: admin)
-- ivan_petrov (роля: teacher, преподава Математика в 10А)
-- todor_ivanov (роля: student, клас: 10А)
-- petar_kalchev (роля: parent, свързан с todor_ivanov)
-- Клас: 10А, Предмет: Математика
-- Назначение: ivan_petrov → 10А → Математика
-
 ### Фаза 5 — Ученически модул ✅
-- Views: grade_list, absence_list, schedule, material_list, statistics
+- Views: grade_list, absence_list, schedule, material_list, statistics, class_info
 - URL prefix: `/student/`
-- Templates: `templates/students/` (5 шаблона)
-- Dashboard бутони свързани с реални URL-и
-- Ученикът вижда само своите данни (филтриране по StudentProfile)
-
-### ФИ11 — Моят клас (ученик) ✅
-- View: class_info в students/views.py
-- Показва: клас, класен ръководител, списък съученици
-- URL: /student/class/
+- Templates: `templates/students/` (6 шаблона)
 
 ### Фаза 6 — Родителски модул ✅
-- Нов app: `parents/` (views + urls, без модели)
-- Views: grade_list, absence_list, schedule, statistics (без материали — не е в ФИ)
-- Поддръжка на множество деца — dropdown бутони за избор
+- App: `parents/`
+- Views: grade_list, absence_list, schedule, material_list, statistics
+- Поддръжка на множество деца — dropdown за избор
 - URL prefix: `/parent/`
-- Templates: `templates/parents/` (4 шаблона)
-- Dashboard бутони свързани с реални URL-и
 
 ### Фаза 7 — Chart.js графики ✅
-- Bar chart в Успеваемост на ученика (ФИ9) — среден успех по предмети
-- Bar chart в Успеваемост на родителя (ФИ17) — същото за детето
-- Цветове: зелено ≥5, жълто ≥4, оранжево ≥3, червено <3
-- Chart.js 4.4.3 от CDN
+- Bar chart в успеваемост на ученик (ФИ9) — среден успех по предмети
+- Bar chart в успеваемост на родител (ФИ17)
+- Bar chart в учителски статистики (ФИ24)
+- Bar chart в административни справки (ФИ35) — среден успех и отсъствия по класове
 
-### Допълнителни ФИ ✅
-- ФИ1/ФИ2: Landing page за нерегистрирани (home.html) — показва функционалностите по роля
-- ФИ18: Родителят вижда учебни материали (върнато, беше погрешно махнато)
-- ФИ24: Chart.js графика в учителските статистики
+### Фаза 8 — Административни справки и финализиране ✅
+- ФИ35: `/admin-panel/statistics/` — карти, графики, таблица по класове, справка за отсъствия
+- Редактиране на учебни материали от учители (раздел 2.2.3)
+- Всички 36 функционални изисквания изпълнени
 
-## Следващи фази
-- **Фаза 8** — Тестване и финализиране (ФИ35: административни справки)
+## Тестови данни в системата
+- admin / admin123 (роля: admin)
+- ivan_petrov (роля: teacher)
+- todor_ivanov (роля: student, клас: 10А)
+- petar_kalchev (роля: parent, свързан с todor_ivanov)
 
 ## Важни файлове
 - Изисквания: `/Users/rumenkalchev/Desktop/Diploma/docu_versions/documentation_diploma3.docx`

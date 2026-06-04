@@ -225,6 +225,29 @@ def material_upload(request):
 
 
 @role_required('teacher')
+def material_edit(request, pk):
+    material = get_object_or_404(Material, pk=pk, teacher=request.user)
+    assignments = _teacher_assignments(request.user)
+    classes = list({a.school_class for a in assignments})
+    subjects = list({a.subject for a in assignments})
+
+    if request.method == 'POST':
+        material.title = request.POST.get('title', '').strip()
+        material.subject_id = request.POST.get('subject')
+        material.school_class_id = request.POST.get('school_class')
+        material.description = request.POST.get('description', '')
+        material.save()
+        messages.success(request, 'Материалът е актуализиран.')
+        return redirect('teacher_material_list')
+
+    return render(request, 'teachers/material_edit_form.html', {
+        'material': material,
+        'classes': classes,
+        'subjects': subjects,
+    })
+
+
+@role_required('teacher')
 def material_delete(request, pk):
     material = get_object_or_404(Material, pk=pk, teacher=request.user)
     if request.method == 'POST':
