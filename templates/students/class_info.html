@@ -21,7 +21,12 @@
             <div class="card-body">
                 <h6 class="text-muted mb-3"><i class="bi bi-person-badge"></i> Класен ръководител</h6>
                 {% if school_class.homeroom_teacher %}
-                <p class="fs-5 fw-semibold mb-0">{{ school_class.homeroom_teacher.get_full_name }}</p>
+                <p class="fs-5 fw-semibold mb-1">{{ school_class.homeroom_teacher.get_full_name }}</p>
+                {% if school_class.homeroom_teacher.email %}
+                <a href="mailto:{{ school_class.homeroom_teacher.email }}" class="text-muted small">
+                    <i class="bi bi-envelope"></i> {{ school_class.homeroom_teacher.email }}
+                </a>
+                {% endif %}
                 {% else %}
                 <p class="text-muted mb-0">Не е назначен</p>
                 {% endif %}

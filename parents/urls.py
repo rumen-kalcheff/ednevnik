@@ -6,5 +6,7 @@ urlpatterns = [
     path('absences/', views.absence_list, name='parent_absence_list'),
     path('schedule/', views.schedule, name='parent_schedule'),
     path('materials/', views.material_list, name='parent_material_list'),
+    path('profile/', views.my_profile, name='parent_profile'),
     path('statistics/', views.statistics, name='parent_statistics'),
+    path('teacher-contacts/', views.teacher_contacts, name='parent_teacher_contacts'),
 ]

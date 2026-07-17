@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Контакти учители{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-person-badge"></i> Контакти учители — Клас {{ school_class }}</h4>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Табло
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Учител</th>
+                    <th>Предмет</th>
+                    <th>Имейл</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in assignments %}
+                <tr>
+                    <td>
+                        {{ a.teacher.get_full_name }}
+                        {% if school_class.homeroom_teacher == a.teacher %}
+                            <span class="badge bg-primary ms-1">Класен ръководител</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ a.subject.name }}</td>
+                    <td>
+                        {% if a.teacher.email %}
+                            <a href="mailto:{{ a.teacher.email }}">{{ a.teacher.email }}</a>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="text-muted">Няма назначени учители.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

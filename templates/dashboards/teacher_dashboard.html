@@ -53,5 +53,25 @@
             </div>
         </div>
     </div>
+    <div class="col-md-3">
+        <div class="card text-white h-100" style="background-color:#6f42c1;">
+            <div class="card-body text-center">
+                <i class="bi bi-telephone fs-1"></i>
+                <h5 class="card-title mt-2">Контакти родители</h5>
+                <p class="card-text small">Имейл и телефон на родители по класове</p>
+                <a href="{% url 'parent_contacts' %}" class="btn btn-light btn-sm">Преглед</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-person-lines-fill fs-1"></i>
+                <h5 class="card-title mt-2">Контакти ученици</h5>
+                <p class="card-text small">Имейли на ученици по класове</p>
+                <a href="{% url 'student_contacts' %}" class="btn btn-light btn-sm">Преглед</a>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

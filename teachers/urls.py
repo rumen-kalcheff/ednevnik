@@ -20,6 +20,11 @@ urlpatterns = [
     # Разписание и статистики
     path('schedule/', views.schedule, name='teacher_schedule'),
     path('statistics/', views.statistics, name='teacher_statistics'),
+    # Профил
+    path('profile/', views.my_profile, name='teacher_profile'),
+    # Контакти
+    path('parent-contacts/', views.parent_contacts, name='parent_contacts'),
+    path('student-contacts/', views.student_contacts, name='student_contacts'),
     # AJAX
     path('api/students-by-class/', views.students_by_class, name='students_by_class'),
 ]

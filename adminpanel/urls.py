@@ -29,4 +29,7 @@ urlpatterns = [
     path('timetable/<int:pk>/delete/', views.timetable_delete, name='timetable_delete'),
     # Справки
     path('statistics/', views.admin_statistics, name='admin_statistics'),
+    # Контакти
+    path('parent-contacts/', views.parent_contacts, name='admin_parent_contacts'),
+    path('student-contacts/', views.student_contacts, name='admin_student_contacts'),
 ]

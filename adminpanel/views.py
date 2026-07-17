@@ -29,14 +29,18 @@ def user_create(request):
             messages.error(request, 'Потребителското име вече съществува.')
             return render(request, 'adminpanel/user_form.html', {'action': 'Създай', 'classes': classes})
 
+        email = request.POST.get('email', '').strip()
         user = User.objects.create_user(
             username=username, password=password,
-            first_name=first_name, last_name=last_name, role=role,
+            first_name=first_name, last_name=last_name, role=role, email=email,
         )
         profile = _create_profile(user)
         if role == 'student' and profile:
             class_id = request.POST.get('school_class') or None
             profile.school_class_id = class_id
+            profile.save()
+        if role == 'parent' and profile:
+            profile.phone = request.POST.get('phone', '').strip()
             profile.save()
         messages.success(request, f'Потребителят {user.get_full_name()} е създаден.')
         return redirect('user_list')
@@ -49,9 +53,11 @@ def user_edit(request, pk):
     user = get_object_or_404(User, pk=pk)
     classes = Class.objects.all()
     student_profile = getattr(user, 'student_profile', None)
+    parent_profile = getattr(user, 'parent_profile', None)
     if request.method == 'POST':
         user.first_name = request.POST.get('first_name', '').strip()
         user.last_name = request.POST.get('last_name', '').strip()
+        user.email = request.POST.get('email', '').strip()
         user.role = request.POST.get('role')
         new_password = request.POST.get('password', '').strip()
         if new_password:
@@ -61,12 +67,17 @@ def user_edit(request, pk):
             profile, _ = StudentProfile.objects.get_or_create(user=user)
             profile.school_class_id = request.POST.get('school_class') or None
             profile.save()
+        if user.role == 'parent':
+            profile, _ = ParentProfile.objects.get_or_create(user=user)
+            profile.phone = request.POST.get('phone', '').strip()
+            profile.save()
         messages.success(request, 'Потребителят е актуализиран.')
         return redirect('user_list')
 
     return render(request, 'adminpanel/user_form.html', {
         'action': 'Редактирай', 'obj': user,
         'classes': classes, 'student_profile': student_profile,
+        'parent_profile': parent_profile,
     })
 
 
@@ -97,6 +108,8 @@ def class_create(request):
         teacher_id = request.POST.get('homeroom_teacher') or None
         if Class.objects.filter(name=name).exists():
             messages.error(request, 'Класът вече съществува.')
+        elif teacher_id and Class.objects.filter(homeroom_teacher_id=teacher_id).exists():
+            messages.error(request, 'Този учител вече е класен ръководител на друг клас.')
         else:
             Class.objects.create(name=name, homeroom_teacher_id=teacher_id)
             messages.success(request, f'Класът {name} е създаден.')
@@ -109,8 +122,15 @@ def class_edit(request, pk):
     school_class = get_object_or_404(Class, pk=pk)
     teachers = User.objects.filter(role='teacher').order_by('last_name')
     if request.method == 'POST':
+        new_teacher_id = request.POST.get('homeroom_teacher') or None
+        if new_teacher_id and str(new_teacher_id) != str(school_class.homeroom_teacher_id):
+            if Class.objects.filter(homeroom_teacher_id=new_teacher_id).exists():
+                messages.error(request, 'Този учител вече е класен ръководител на друг клас.')
+                return render(request, 'adminpanel/class_form.html', {
+                    'action': 'Редактирай', 'obj': school_class, 'teachers': teachers
+                })
         school_class.name = request.POST.get('name', '').strip()
-        school_class.homeroom_teacher_id = request.POST.get('homeroom_teacher') or None
+        school_class.homeroom_teacher_id = new_teacher_id
         school_class.save()
         messages.success(request, 'Класът е актуализиран.')
         return redirect('class_list')
@@ -352,6 +372,53 @@ def admin_statistics(request):
         'overall_avg': round(overall_avg, 2) if overall_avg else None,
         'class_stats': class_stats,
         'chart_data': chart_data,
+    })
+
+
+# ── Контакти на родители ─────────────────────────────────────
+
+@role_required('admin')
+def parent_contacts(request):
+    from school.models import Class
+    available_classes = Class.objects.all().order_by('name')
+    selected_class_id = request.GET.get('class')
+    classes_to_show = available_classes.filter(pk=selected_class_id) if selected_class_id else available_classes
+
+    classes_with_parents = []
+    for school_class in classes_to_show:
+        student_ids = StudentProfile.objects.filter(
+            school_class=school_class
+        ).values_list('pk', flat=True)
+        parents = ParentProfile.objects.filter(
+            children__pk__in=student_ids
+        ).select_related('user').prefetch_related('children__user').distinct()
+        classes_with_parents.append({'school_class': school_class, 'parents': parents})
+
+    return render(request, 'adminpanel/parent_contacts.html', {
+        'classes_with_parents': classes_with_parents,
+        'available_classes': available_classes,
+        'selected_class_id': selected_class_id,
+    })
+
+
+@role_required('admin')
+def student_contacts(request):
+    from school.models import Class
+    available_classes = Class.objects.all().order_by('name')
+    selected_class_id = request.GET.get('class')
+    classes_to_show = available_classes.filter(pk=selected_class_id) if selected_class_id else available_classes
+
+    classes_with_students = []
+    for school_class in classes_to_show:
+        students = StudentProfile.objects.filter(
+            school_class=school_class
+        ).select_related('user').order_by('user__last_name')
+        classes_with_students.append({'school_class': school_class, 'students': students})
+
+    return render(request, 'adminpanel/student_contacts.html', {
+        'classes_with_students': classes_with_students,
+        'available_classes': available_classes,
+        'selected_class_id': selected_class_id,
     })
 
 

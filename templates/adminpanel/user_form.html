@@ -28,6 +28,11 @@
                                value="{{ obj.last_name|default:'' }}" required>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Имейл</label>
+                        <input type="email" name="email" class="form-control"
+                               value="{{ obj.email|default:'' }}">
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Роля</label>
                         <select name="role" class="form-select" required>
                             <option value="">-- Избери --</option>
@@ -36,6 +41,11 @@
                             <option value="student" {% if obj.role == 'student' %}selected{% endif %}>Ученик</option>
                             <option value="parent" {% if obj.role == 'parent' %}selected{% endif %}>Родител</option>
                         </select>
+                    </div>
+                    <div class="mb-3" id="phone-field" style="display:none;">
+                        <label class="form-label">Телефон</label>
+                        <input type="text" name="phone" class="form-control"
+                               value="{{ parent_profile.phone|default:'' }}">
                     </div>
                     <div class="mb-3" id="class-field" style="display:none;">
                         <label class="form-label">Клас</label>
@@ -73,10 +83,12 @@
 <script>
     const roleSelect = document.querySelector('select[name="role"]');
     const classField = document.getElementById('class-field');
-    function toggleClass() {
+    const phoneField = document.getElementById('phone-field');
+    function toggleFields() {
         classField.style.display = roleSelect.value === 'student' ? 'block' : 'none';
+        phoneField.style.display = roleSelect.value === 'parent' ? 'block' : 'none';
     }
-    roleSelect.addEventListener('change', toggleClass);
-    toggleClass();
+    roleSelect.addEventListener('change', toggleFields);
+    toggleFields();
 </script>
 {% endblock %}

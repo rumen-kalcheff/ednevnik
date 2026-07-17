@@ -147,12 +147,42 @@ def absence_add(request):
         if absence_date_obj > date.today():
             messages.error(request, 'Датата не може да бъде в бъдещето.')
         else:
+            from school.models import Subject
+            from students.models import ParentProfile
+            from django.core.mail import send_mail
+            from django.conf import settings
+
+            subject_obj = Subject.objects.get(pk=subject_id)
+            absence_type_display = dict(Absence.ABSENCE_TYPE_CHOICES).get(absence_type, absence_type)
+
             for sid in student_ids:
-                Absence.objects.get_or_create(
+                _, created = Absence.objects.get_or_create(
                     student_id=sid, subject_id=subject_id,
                     teacher=request.user, date=absence_date,
                     defaults={'absence_type': absence_type},
                 )
+                if created:
+                    student = StudentProfile.objects.select_related('user').get(pk=sid)
+                    parents = ParentProfile.objects.filter(
+                        children=student
+                    ).select_related('user')
+                    parent_emails = [p.user.email for p in parents if p.user.email]
+                    if parent_emails:
+                        send_mail(
+                            subject=f'Отсъствие на {student.user.get_full_name()}',
+                            message=(
+                                f'Уважаеми родителю,\n\n'
+                                f'Вашето дете {student.user.get_full_name()} има записано отсъствие:\n\n'
+                                f'Дата: {absence_date_obj.strftime("%d.%m.%Y")}\n'
+                                f'Предмет: {subject_obj.name}\n'
+                                f'Вид: {absence_type_display}\n'
+                                f'Учител: {request.user.get_full_name()}\n\n'
+                                f'С уважение,\nEduNova'
+                            ),
+                            from_email=settings.DEFAULT_FROM_EMAIL,
+                            recipient_list=parent_emails,
+                            fail_silently=True,
+                        )
             messages.success(request, 'Отсъствията са записани.')
             return redirect('absence_list')
 
@@ -305,6 +335,81 @@ def statistics(request):
     return render(request, 'teachers/statistics.html', {
         'stats': stats,
         'chart_data': chart_data,
+    })
+
+
+# ── Моят профил ──────────────────────────────────────────────
+
+@role_required('teacher')
+def my_profile(request):
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        request.user.email = email
+        request.user.save()
+        messages.success(request, 'Профилът е актуализиран.')
+        return redirect('teacher_profile')
+    return render(request, 'teachers/my_profile.html')
+
+
+# ── Контакти на родители ─────────────────────────────────────
+
+@role_required('teacher', 'admin')
+def parent_contacts(request):
+    from students.models import ParentProfile
+    from school.models import Class
+    assignments = _teacher_assignments(request.user)
+    available_classes = Class.objects.filter(
+        pk__in=assignments.values_list('school_class_id', flat=True)
+    ).order_by('name')
+
+    selected_class_id = request.GET.get('class')
+    if selected_class_id:
+        classes_to_show = available_classes.filter(pk=selected_class_id)
+    else:
+        classes_to_show = available_classes
+
+    classes_with_parents = []
+    for school_class in classes_to_show:
+        student_ids = StudentProfile.objects.filter(
+            school_class=school_class
+        ).values_list('pk', flat=True)
+        parents = ParentProfile.objects.filter(
+            children__pk__in=student_ids
+        ).select_related('user').prefetch_related('children__user').distinct()
+        classes_with_parents.append({'school_class': school_class, 'parents': parents})
+
+    return render(request, 'teachers/parent_contacts.html', {
+        'classes_with_parents': classes_with_parents,
+        'available_classes': available_classes,
+        'selected_class_id': selected_class_id,
+    })
+
+
+@role_required('teacher', 'admin')
+def student_contacts(request):
+    from school.models import Class
+    assignments = _teacher_assignments(request.user)
+    available_classes = Class.objects.filter(
+        pk__in=assignments.values_list('school_class_id', flat=True)
+    ).order_by('name')
+
+    selected_class_id = request.GET.get('class')
+    if selected_class_id:
+        classes_to_show = available_classes.filter(pk=selected_class_id)
+    else:
+        classes_to_show = available_classes
+
+    classes_with_students = []
+    for school_class in classes_to_show:
+        students = StudentProfile.objects.filter(
+            school_class=school_class
+        ).select_related('user').order_by('user__last_name')
+        classes_with_students.append({'school_class': school_class, 'students': students})
+
+    return render(request, 'teachers/student_contacts.html', {
+        'classes_with_students': classes_with_students,
+        'available_classes': available_classes,
+        'selected_class_id': selected_class_id,
     })
 
 

@@ -108,6 +108,19 @@ def class_info(request):
 
 
 @role_required('student')
+def teacher_contacts(request):
+    from school.models import TeacherClassSubject
+    profile = request.user.student_profile
+    assignments = TeacherClassSubject.objects.filter(
+        school_class=profile.school_class
+    ).select_related('teacher', 'subject').order_by('subject__name')
+    return render(request, 'students/teacher_contacts.html', {
+        'assignments': assignments,
+        'school_class': profile.school_class,
+    })
+
+
+@role_required('student')
 def statistics(request):
     import json
     profile = request.user.student_profile

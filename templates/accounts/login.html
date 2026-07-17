@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Вход — Електронен дневник{% endblock %}
+{% block title %}Вход — EduNova{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center mt-5">
@@ -8,7 +8,7 @@
         <div class="card shadow">
             <div class="card-body p-4">
                 <h4 class="card-title text-center mb-4">
-                    <i class="bi bi-book text-primary"></i> Електронен дневник
+                    <i class="bi bi-book text-primary"></i> EduNova
                 </h4>
                 <h6 class="text-center text-muted mb-4">Вход в системата</h6>
 
@@ -32,6 +32,9 @@
                         <i class="bi bi-box-arrow-in-right"></i> Влез
                     </button>
                 </form>
+                <div class="text-center mt-3">
+                    <a href="{% url 'password_reset' %}" class="text-muted small">Забравена парола?</a>
+                </div>
             </div>
         </div>
     </div>

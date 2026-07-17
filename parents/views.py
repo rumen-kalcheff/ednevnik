@@ -1,4 +1,5 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
 from django.db.models import Avg
 from accounts.decorators import role_required
 from school.models import Timetable
@@ -108,6 +109,38 @@ def material_list(request):
     return render(request, 'parents/material_list.html', {
         'materials': materials, 'child': child, 'children': children,
         'subjects': subjects, 'selected_subject': selected_subject,
+    })
+
+
+@role_required('parent')
+def my_profile(request):
+    parent = request.user.parent_profile
+    if request.method == 'POST':
+        request.user.email = request.POST.get('email', '').strip()
+        request.user.save()
+        parent.phone = request.POST.get('phone', '').strip()
+        parent.save()
+        messages.success(request, 'Профилът е актуализиран.')
+        return redirect('parent_profile')
+    return render(request, 'parents/my_profile.html', {'parent': parent})
+
+
+@role_required('parent')
+def teacher_contacts(request):
+    from school.models import TeacherClassSubject
+    parent = request.user.parent_profile
+    child, children = _get_child(request, parent)
+
+    assignments = []
+    if child and child.school_class:
+        assignments = TeacherClassSubject.objects.filter(
+            school_class=child.school_class
+        ).select_related('teacher', 'subject').order_by('subject__name')
+
+    return render(request, 'parents/teacher_contacts.html', {
+        'assignments': assignments,
+        'child': child,
+        'children': children,
     })
 
 

@@ -44,6 +44,7 @@ class ParentProfile(models.Model):
         related_name='parents',
         verbose_name='Деца',
     )
+    phone = models.CharField(max_length=20, blank=True, verbose_name='Телефон')
 
     class Meta:
         verbose_name = 'Родител'

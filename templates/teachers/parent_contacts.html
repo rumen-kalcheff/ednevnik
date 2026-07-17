@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Контакти на родители{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-people"></i> Контакти на родители</h4>
+    <a href="{% url 'student_contacts' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-person-lines-fill"></i> Контакти на ученици
+    </a>
+</div>
+
+<form method="get" class="mb-4">
+    <div class="row g-2 align-items-end">
+        <div class="col-auto">
+            <label class="form-label mb-1">Филтрирай по клас</label>
+            <select name="class" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">— Всички класове —</option>
+                {% for c in available_classes %}
+                    <option value="{{ c.pk }}" {% if selected_class_id == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if selected_class_id %}
+        <div class="col-auto">
+            <a href="{% url 'parent_contacts' %}" class="btn btn-sm btn-outline-secondary">Изчисти</a>
+        </div>
+        {% endif %}
+    </div>
+</form>
+
+{% for entry in classes_with_parents %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header fw-bold">
+        <i class="bi bi-building"></i> Клас {{ entry.school_class.name }}
+    </div>
+    {% if entry.parents %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Родител</th>
+                    <th>Имейл</th>
+                    <th>Телефон</th>
+                    <th>Деца в класа</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for parent in entry.parents %}
+                <tr>
+                    <td>{{ parent.user.get_full_name }}</td>
+                    <td>
+                        {% if parent.user.email %}
+                            <a href="mailto:{{ parent.user.email }}">{{ parent.user.email }}</a>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if parent.phone %}
+                            <a href="tel:{{ parent.phone }}">{{ parent.phone }}</a>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% for child in parent.children.all %}
+                            {% if child.school_class == entry.school_class %}
+                                <span class="badge bg-secondary">{{ child.user.get_full_name }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-muted">Няма регистрирани родители за този клас.</div>
+    {% endif %}
+</div>
+{% empty %}
+<div class="alert alert-info">Няма класове за показване.</div>
+{% endfor %}
+{% endblock %}
