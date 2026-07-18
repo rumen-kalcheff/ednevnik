@@ -20,6 +20,7 @@ class StudentProfile(models.Model):
         verbose_name='Клас',
     )
     date_of_birth = models.DateField(null=True, blank=True, verbose_name='Дата на раждане')
+    egn = models.CharField(max_length=10, blank=True, verbose_name='ЕГН')
 
     class Meta:
         verbose_name = 'Ученик'

@@ -13,7 +13,9 @@
                     {% csrf_token %}
                     <div class="mb-3">
                         <label class="form-label">Родител</label>
-                        <select name="parent" class="form-select" required>
+                        <input type="text" id="parent-search" class="form-control form-control-sm mb-1"
+                               placeholder="Търси по име…" autocomplete="off">
+                        <select name="parent" id="parent-select" class="form-select" required size="5">
                             <option value="">-- Избери родител --</option>
                             {% for p in parents %}
                             <option value="{{ p.pk }}">{{ p.user.get_full_name }}</option>
@@ -21,12 +23,15 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Деца <small class="text-muted">(може да избереш повече от едно)</small></label>
-                        <select name="students" class="form-select" multiple size="8">
+                        <label class="form-label">Деца <small class="text-muted">(Ctrl+клик за повече от едно)</small></label>
+                        <input type="text" id="student-search" class="form-control form-control-sm mb-1"
+                               placeholder="Търси по име, клас или ЕГН…" autocomplete="off">
+                        <select name="students" id="student-select" class="form-select" multiple size="10">
                             {% for s in students %}
-                            <option value="{{ s.pk }}">{{ s.user.get_full_name }} — {{ s.school_class }}</option>
+                            <option value="{{ s.pk }}">{{ s.user.get_full_name }}{% if s.egn %} ({{ s.egn }}){% endif %} — {{ s.school_class }}</option>
                             {% endfor %}
                         </select>
+                        <div id="student-count" class="form-text text-muted mt-1"></div>
                     </div>
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-check-lg"></i> Запази
@@ -37,9 +42,13 @@
     </div>
     <div class="col-md-7">
         <div class="card shadow-sm">
-            <div class="card-header">Текущи връзки</div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Текущи връзки</span>
+                <input type="text" id="table-search" class="form-control form-control-sm w-50"
+                       placeholder="Филтрирай таблицата…" autocomplete="off">
+            </div>
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0" id="links-table">
                     <thead class="table-light">
                         <tr><th>Родител</th><th>Деца</th></tr>
                     </thead>
@@ -64,4 +73,64 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function liveFilter(inputId, selectId, countId) {
+    const input = document.getElementById(inputId);
+    const select = document.getElementById(selectId);
+    const countEl = countId ? document.getElementById(countId) : null;
+
+    // Snapshot once; parse each option into { value, text, nameClass, egn }
+    // Option format: "Ime Familiya (EGN) — Klas"  or  "Ime Familiya — Klas"
+    const EGN_RE = /\((\d+)\)/;
+    const snapshot = Array.from(select.options).map(o => {
+        const m = EGN_RE.exec(o.text);
+        const egn = m ? m[1] : '';
+        const nameClass = o.text.replace(EGN_RE, '').replace(/\s{2,}/g, ' ').trim();
+        return { value: o.value, text: o.text, nameClass, egn };
+    });
+    const placeholder = snapshot.find(o => o.value === '');
+    const entries = snapshot.filter(o => o.value !== '');
+
+    function matches(entry, q) {
+        if (!q) return true;
+        // 5+ digits → EGN search only (partial EGN); otherwise name+class search
+        if (/^\d{5,}$/.test(q)) return entry.egn.includes(q);
+        return entry.nameClass.toLowerCase().includes(q);
+    }
+
+    function rebuild(q) {
+        const prev = Array.from(select.selectedOptions).map(o => o.value);
+        select.innerHTML = '';
+        if (placeholder) select.add(new Option(placeholder.text, placeholder.value));
+        let shown = 0;
+        entries.forEach(entry => {
+            if (matches(entry, q)) {
+                const opt = new Option(entry.text, entry.value);
+                if (prev.includes(entry.value)) opt.selected = true;
+                select.add(opt);
+                shown++;
+            }
+        });
+        if (countEl) countEl.textContent = shown + ' ученик/а показани';
+    }
+
+    input.addEventListener('input', function () {
+        rebuild(this.value.trim().toLowerCase());
+    });
+    rebuild('');
+}
+
+liveFilter('parent-search', 'parent-select', null);
+liveFilter('student-search', 'student-select', 'student-count');
+
+document.getElementById('table-search').addEventListener('input', function () {
+    const q = this.value.toLowerCase().trim();
+    document.querySelectorAll('#links-table tbody tr').forEach(row => {
+        row.style.display = (!q || row.textContent.toLowerCase().includes(q)) ? '' : 'none';
+    });
+});
+</script>
 {% endblock %}

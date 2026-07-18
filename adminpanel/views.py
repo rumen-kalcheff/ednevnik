@@ -38,6 +38,7 @@ def user_create(request):
         if role == 'student' and profile:
             class_id = request.POST.get('school_class') or None
             profile.school_class_id = class_id
+            profile.egn = request.POST.get('egn', '').strip()
             profile.save()
         if role == 'parent' and profile:
             profile.phone = request.POST.get('phone', '').strip()
@@ -66,6 +67,7 @@ def user_edit(request, pk):
         if user.role == 'student':
             profile, _ = StudentProfile.objects.get_or_create(user=user)
             profile.school_class_id = request.POST.get('school_class') or None
+            profile.egn = request.POST.get('egn', '').strip()
             profile.save()
         if user.role == 'parent':
             profile, _ = ParentProfile.objects.get_or_create(user=user)

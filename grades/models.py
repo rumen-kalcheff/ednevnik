@@ -9,7 +9,12 @@ class Grade(models.Model):
         ('oral', 'Устно изпитване'),
         ('written', 'Контролно'),
         ('current', 'Текуща'),
+        ('term1', 'Срочна – 1 срок'),
+        ('term2', 'Срочна – 2 срок'),
+        ('annual', 'Годишна'),
     ]
+    # Срочни и годишни оценки — обобщаващи, по една на ученик/предмет
+    FINAL_TYPES = ('term1', 'term2', 'annual')
     GRADE_VALUES = [(i, str(i)) for i in range(2, 7)]
 
     student = models.ForeignKey(

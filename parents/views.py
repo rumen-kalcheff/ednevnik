@@ -25,7 +25,7 @@ def grade_list(request):
     parent = request.user.parent_profile
     child, children = _get_child(request, parent)
 
-    grades = Grade.objects.none()
+    sections = []
     subjects = []
     selected_subject = request.GET.get('subject')
 
@@ -34,11 +34,13 @@ def grade_list(request):
         if selected_subject:
             grades = grades.filter(subject_id=selected_subject)
         from school.models import Subject
+        from grades.utils import group_grades_by_subject
         subject_ids = child.grades.values_list('subject', flat=True).distinct()
         subjects = Subject.objects.filter(pk__in=subject_ids)
+        sections = group_grades_by_subject(grades)
 
     return render(request, 'parents/grade_list.html', {
-        'grades': grades, 'child': child, 'children': children,
+        'sections': sections, 'child': child, 'children': children,
         'subjects': subjects, 'selected_subject': selected_subject,
     })
 

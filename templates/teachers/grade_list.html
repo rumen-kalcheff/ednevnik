@@ -1,9 +1,21 @@
 {% extends 'base.html' %}
 {% block title %}Оценки{% endblock %}
+
+{% block extra_css %}
+<style>
+    .grade-badge { font-size: .8rem; }
+    .grades-row { display: flex; flex-wrap: nowrap; align-items: center; gap: 3px; }
+    td.grades-cell { min-width: 260px; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4><i class="bi bi-pencil-square"></i> Оценки</h4>
-    <a href="{% url 'grade_add' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Нова оценка</a>
+    <div class="d-flex gap-2">
+        <a href="{% url 'grade_bulk' %}" class="btn btn-success btn-sm"><i class="bi bi-lightning-charge"></i> Бързо въвеждане (цял клас)</a>
+        <a href="{% url 'grade_add' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Нова оценка</a>
+    </div>
 </div>
 
 <form class="row g-2 mb-3" method="get">
@@ -22,31 +34,58 @@
     <div class="col-auto"><button type="submit" class="btn btn-outline-secondary btn-sm">Филтрирай</button></div>
 </form>
 
-<div class="card shadow-sm">
+{% for section in sections %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header d-flex align-items-center gap-2">
+        <span class="badge bg-primary">{{ section.school_class.name }}</span>
+        <strong>{{ section.subject.name }}</strong>
+    </div>
     <div class="table-responsive">
-        <table class="table table-hover mb-0">
+        <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
-                <tr><th>Ученик</th><th>Клас</th><th>Предмет</th><th>Оценка</th><th>Вид</th><th>Дата</th><th class="text-end">Действия</th></tr>
+                <tr>
+                    <th style="width:40px;">#</th>
+                    <th>Ученик</th>
+                    <th class="grades-cell">Текущи оценки</th>
+                    <th class="text-center" style="width:75px;">1 срок</th>
+                    <th class="text-center" style="width:75px;">2 срок</th>
+                    <th class="text-center" style="width:80px;">Годишна</th>
+                </tr>
             </thead>
             <tbody>
-                {% for g in grades %}
+                {% for row in section.rows %}
                 <tr>
-                    <td>{{ g.student.user.get_full_name }}</td>
-                    <td>{{ g.student.school_class }}</td>
-                    <td>{{ g.subject }}</td>
-                    <td><span class="badge {% if g.value >= 5 %}bg-success{% elif g.value == 4 %}bg-warning text-dark{% elif g.value == 3 %}bg-warning text-dark{% else %}bg-danger{% endif %} fs-6">{{ g.value }}</span></td>
-                    <td>{{ g.get_grade_type_display }}</td>
-                    <td>{{ g.date }}</td>
-                    <td class="text-end">
-                        <a href="{% url 'grade_edit' g.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
-                        <a href="{% url 'grade_delete' g.pk %}" class="btn btn-sm btn-outline-danger ms-1"><i class="bi bi-trash"></i></a>
+                    <td class="text-muted">{{ forloop.counter }}</td>
+                    <td class="fw-medium">{{ row.student.user.get_full_name }}</td>
+                    <td class="grades-cell">
+                        {% if row.grades %}
+                        <div class="grades-row">
+                            {% for g in row.grades %}{% include 'partials/_grade_badge.html' %}{% endfor %}
+                        </div>
+                        {% else %}
+                        <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if row.finals.term1 %}{% include 'partials/_grade_badge.html' with g=row.finals.term1 %}{% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if row.finals.term2 %}{% include 'partials/_grade_badge.html' with g=row.finals.term2 %}{% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if row.finals.annual %}{% include 'partials/_grade_badge.html' with g=row.finals.annual %}{% else %}<span class="text-muted">—</span>{% endif %}
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="7" class="text-center text-muted py-4">Няма въведени оценки.</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-4">В този клас няма ученици.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+{% empty %}
+<div class="card shadow-sm">
+    <div class="card-body text-center text-muted py-4">Няма назначения за показване.</div>
+</div>
+{% endfor %}
 {% endblock %}

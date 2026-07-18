@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% block title %}Бързо въвеждане на оценки{% endblock %}
+
+{% block extra_css %}
+<style>
+    .grade-badge { font-size: .8rem; }
+    .value-input { width: 64px; text-align: center; font-weight: 600; }
+    .value-input::-webkit-outer-spin-button,
+    .value-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .value-input { -moz-appearance: textfield; }
+    /* Всички текущи оценки на един ред; при нужда цялата таблица скролва хоризонтално */
+    td.grades-cell { min-width: 260px; }
+    .grades-row { display: flex; flex-wrap: nowrap; align-items: center; gap: 3px; }
+    /* Малко × за изтриване — вътре в баджа, за да не се отрязва */
+    .grade-chip { position: relative; padding-right: 1.4rem; flex: 0 0 auto; }
+    .grade-del {
+        position: absolute; top: 50%; right: 3px; transform: translateY(-50%);
+        width: 14px; height: 14px; padding: 0;
+        display: flex; align-items: center; justify-content: center;
+        border: none; border-radius: 50%;
+        background: rgba(0,0,0,.35); color: #fff;
+        font-size: 10px; line-height: 1; cursor: pointer;
+    }
+    .grade-del:hover { background: #dc3545; }
+    /* Колоната „Забележка“ да не отрязва плейсхолдъра */
+    .note-cell { min-width: 160px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-lightning-charge"></i> Бързо въвеждане на оценки</h4>
+    <a href="{% url 'grade_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-list-ul"></i> Всички оценки
+    </a>
+</div>
+
+<form class="row g-2 mb-3 align-items-end" method="get">
+    <div class="col-auto">
+        <label class="form-label small mb-1">Клас</label>
+        <select name="class" class="form-select form-select-sm" required onchange="this.form.submit()">
+            <option value="">— Избери клас —</option>
+            {% for c in classes %}
+            <option value="{{ c.pk }}" {% if selected_class == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <label class="form-label small mb-1">Предмет</label>
+        <select name="subject" class="form-select form-select-sm" required onchange="this.form.submit()">
+            <option value="">— Избери предмет —</option>
+            {% for s in subjects %}
+            <option value="{{ s.pk }}" {% if selected_subject == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-secondary btn-sm">Зареди клас</button>
+    </div>
+</form>
+
+{% if valid %}
+{# Отделна форма за изтриване — бутоните × в таблицата я ползват чрез form="delete-form" #}
+<form method="post" id="delete-form">
+    {% csrf_token %}
+    <input type="hidden" name="class" value="{{ selected_class }}">
+    <input type="hidden" name="subject" value="{{ selected_subject }}">
+</form>
+
+<form method="post" id="bulk-form">
+    {% csrf_token %}
+    <input type="hidden" name="class" value="{{ selected_class }}">
+    <input type="hidden" name="subject" value="{{ selected_subject }}">
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label small mb-1">Вид оценка (за всички)</label>
+                    <select name="grade_type" id="grade-type" class="form-select form-select-sm" required>
+                        {% for val, label in grade_types %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label small mb-1">Дата</label>
+                    <input type="date" name="date" class="form-control form-control-sm"
+                           value="{{ today|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}" required>
+                </div>
+                <div class="col text-muted small">
+                    <i class="bi bi-info-circle"></i>
+                    Въведи оценка (2–6) само за учениците, които оценяваш. Празните полета се пропускат.
+                    Срочните и годишните оценки се обновяват, ако вече съществуват.
+                    Максимум {{ max_current }} текущи оценки на ученик за предмет.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:40px;">#</th>
+                        <th>Ученик</th>
+                        <th class="grades-cell">Текущи оценки</th>
+                        <th class="text-center" style="width:75px;">1 срок</th>
+                        <th class="text-center" style="width:75px;">2 срок</th>
+                        <th class="text-center" style="width:80px;">Годишна</th>
+                        <th class="text-center" style="width:110px;">Нова оценка</th>
+                        <th class="note-cell">Забележка</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        <td class="text-muted">{{ forloop.counter }}</td>
+                        <td class="fw-medium">{{ row.student.user.get_full_name }}</td>
+                        <td class="grades-cell">
+                            {% if row.grades %}
+                            <div class="grades-row">
+                                {% for g in row.grades %}{% include 'teachers/_grade_chip.html' %}{% endfor %}
+                                {% if row.at_limit %}<span class="badge bg-dark ms-1" title="Достигнат е максимумът от {{ max_current }} текущи оценки">{{ max_current }}/{{ max_current }}</span>{% endif %}
+                            </div>
+                            {% else %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if row.finals.term1 %}{% include 'teachers/_grade_chip.html' with g=row.finals.term1 %}{% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if row.finals.term2 %}{% include 'teachers/_grade_chip.html' with g=row.finals.term2 %}{% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if row.finals.annual %}{% include 'teachers/_grade_chip.html' with g=row.finals.annual %}{% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td class="text-center">
+                            <input type="number" name="value_{{ row.student.pk }}" min="2" max="6"
+                                   class="form-control form-control-sm value-input grade-value"
+                                   inputmode="numeric" autocomplete="off" placeholder="–">
+                        </td>
+                        <td class="note-cell">
+                            <input type="text" name="note_{{ row.student.pk }}"
+                                   class="form-control form-control-sm" autocomplete="off"
+                                   placeholder="незадължително">
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted py-4">В този клас няма ученици.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if rows %}
+    <div class="d-flex gap-2 mt-3">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Запази оценките
+        </button>
+        <button type="button" class="btn btn-outline-secondary" id="clear-btn">
+            <i class="bi bi-eraser"></i> Изчисти
+        </button>
+    </div>
+    {% endif %}
+</form>
+{% elif selected_class and selected_subject %}
+<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> Нямате назначение за този клас и предмет.</div>
+{% else %}
+<div class="alert alert-info"><i class="bi bi-arrow-up"></i> Избери клас и предмет, за да въведеш оценки за целия клас наведнъж.</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const inputs = Array.from(document.querySelectorAll('.grade-value'));
+    // Enter преминава към следващото поле за оценка (по-бързо въвеждане с клавиатура).
+    inputs.forEach((inp, i) => {
+        inp.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const next = inputs[i + 1];
+                if (next) next.focus();
+            }
+        });
+    });
+    const clearBtn = document.getElementById('clear-btn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            document.querySelectorAll('#bulk-form input[type=number], #bulk-form input[type=text]')
+                .forEach(el => { el.value = ''; });
+        });
+    }
+})();
+</script>
+{% endblock %}

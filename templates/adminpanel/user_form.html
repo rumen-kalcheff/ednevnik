@@ -59,6 +59,13 @@
                             {% endfor %}
                         </select>
                     </div>
+                    <div class="mb-3" id="egn-field" style="display:none;">
+                        <label class="form-label">ЕГН <small class="text-muted">(10 цифри)</small></label>
+                        <input type="text" name="egn" class="form-control"
+                               maxlength="10" pattern="\d{0,10}"
+                               value="{{ student_profile.egn|default:'' }}"
+                               placeholder="напр. 0612151234">
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">
                             Парола {% if obj %}<small class="text-muted">(остави празно за без промяна)</small>{% endif %}
@@ -84,8 +91,11 @@
     const roleSelect = document.querySelector('select[name="role"]');
     const classField = document.getElementById('class-field');
     const phoneField = document.getElementById('phone-field');
+    const egnField = document.getElementById('egn-field');
     function toggleFields() {
-        classField.style.display = roleSelect.value === 'student' ? 'block' : 'none';
+        const isStudent = roleSelect.value === 'student';
+        classField.style.display = isStudent ? 'block' : 'none';
+        egnField.style.display = isStudent ? 'block' : 'none';
         phoneField.style.display = roleSelect.value === 'parent' ? 'block' : 'none';
     }
     roleSelect.addEventListener('change', toggleFields);

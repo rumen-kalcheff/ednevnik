@@ -1,0 +1,45 @@
+{# Очаква `sections` от group_grades_by_subject: списък от {subject, teacher_names, grades, finals} #}
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Предмет</th>
+                    <th>Учител</th>
+                    <th class="grades-cell">Текущи оценки</th>
+                    <th class="text-center" style="width:75px;">1 срок</th>
+                    <th class="text-center" style="width:75px;">2 срок</th>
+                    <th class="text-center" style="width:80px;">Годишна</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for section in sections %}
+                <tr>
+                    <td class="fw-medium">{{ section.subject.name }}</td>
+                    <td class="text-muted small">{{ section.teacher_names }}</td>
+                    <td class="grades-cell">
+                        {% if section.grades %}
+                        <div class="grades-row">
+                            {% for g in section.grades %}{% include 'partials/_grade_badge.html' %}{% endfor %}
+                        </div>
+                        {% else %}
+                        <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if section.finals.term1 %}{% include 'partials/_grade_badge.html' with g=section.finals.term1 %}{% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if section.finals.term2 %}{% include 'partials/_grade_badge.html' with g=section.finals.term2 %}{% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if section.finals.annual %}{% include 'partials/_grade_badge.html' with g=section.finals.annual %}{% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">Няма въведени оценки.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

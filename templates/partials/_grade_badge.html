@@ -1,0 +1,1 @@
+<span class="badge grade-badge {% if g.value >= 5 %}bg-success{% elif g.value >= 3 %}bg-warning text-dark{% else %}bg-danger{% endif %} me-1" title="{{ g.get_grade_type_display }} · {{ g.date }}{% if g.note %} · {{ g.note }}{% endif %}">{{ g.value }}</span>

@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Avg
+from collections import Counter
 from datetime import date
 from accounts.decorators import role_required
 from school.models import TeacherClassSubject, Timetable
@@ -13,6 +14,10 @@ def _teacher_assignments(user):
     return TeacherClassSubject.objects.filter(teacher=user).select_related('school_class', 'subject')
 
 
+# Максимален брой текущи (нефинални) оценки на ученик за предмет.
+MAX_CURRENT_GRADES = 15
+
+
 # ── Оценки ───────────────────────────────────────────────────
 
 @role_required('teacher')
@@ -21,19 +26,44 @@ def grade_list(request):
     class_id = request.GET.get('class')
     subject_id = request.GET.get('subject')
 
-    grades = Grade.objects.filter(teacher=request.user).select_related(
-        'student__user', 'subject', 'student__school_class'
-    )
+    # Кои назначения (клас+предмет) да покажем спрямо филтрите.
+    shown = assignments
     if class_id:
-        grades = grades.filter(student__school_class_id=class_id)
+        shown = shown.filter(school_class_id=class_id)
     if subject_id:
-        grades = grades.filter(subject_id=subject_id)
+        shown = shown.filter(subject_id=subject_id)
+
+    # Една секция на клас+предмет; вътре — един ред на ученик с всичките му оценки.
+    sections = []
+    for a in shown.order_by('school_class__name', 'subject__name'):
+        students = StudentProfile.objects.filter(
+            school_class=a.school_class
+        ).select_related('user').order_by('user__first_name', 'user__last_name')
+
+        by_student = {}
+        grades = Grade.objects.filter(
+            teacher=request.user, subject=a.subject,
+            student__school_class=a.school_class,
+        ).order_by('pk')
+        for g in grades:
+            by_student.setdefault(g.student_id, []).append(g)
+
+        rows = []
+        for s in students:
+            sgrades = by_student.get(s.pk, [])
+            finals = {g.grade_type: g for g in sgrades if g.grade_type in Grade.FINAL_TYPES}
+            current = [g for g in sgrades if g.grade_type not in Grade.FINAL_TYPES]
+            rows.append({'student': s, 'grades': current, 'finals': finals})
+
+        sections.append({
+            'school_class': a.school_class, 'subject': a.subject, 'rows': rows,
+        })
 
     classes = [a.school_class for a in assignments]
     subjects = [a.subject for a in assignments]
 
     return render(request, 'teachers/grade_list.html', {
-        'grades': grades, 'classes': classes, 'subjects': subjects,
+        'sections': sections, 'classes': classes, 'subjects': subjects,
         'selected_class': class_id, 'selected_subject': subject_id,
     })
 
@@ -74,6 +104,140 @@ def grade_add(request):
         'classes': classes, 'subjects': subjects,
         'grade_types': Grade.GRADE_TYPE_CHOICES,
         'grade_values': Grade.GRADE_VALUES,
+        'today': date.today(),
+    })
+
+
+@role_required('teacher')
+def grade_bulk(request):
+    """Бързо въвеждане на оценки за цял клас по избран предмет."""
+    import datetime
+    assignments = _teacher_assignments(request.user)
+    classes = list({a.school_class for a in assignments})
+    subjects = list({a.subject for a in assignments})
+
+    class_id = request.GET.get('class') or request.POST.get('class') or ''
+    subject_id = request.GET.get('subject') or request.POST.get('subject') or ''
+
+    # Позволени са само комбинации клас+предмет, за които учителят е назначен.
+    valid = bool(class_id and subject_id and assignments.filter(
+        school_class_id=class_id, subject_id=subject_id).exists())
+
+    students = []
+    if valid:
+        students = list(StudentProfile.objects.filter(
+            school_class_id=class_id
+        ).select_related('user').order_by('user__first_name', 'user__last_name'))
+
+    if request.method == 'POST':
+        if not valid:
+            messages.error(request, 'Нямате назначение за този клас и предмет.')
+            return redirect('grade_bulk')
+
+        # Изтриване на единична оценка (inline от таблицата).
+        delete_id = request.POST.get('delete_grade')
+        if delete_id:
+            deleted, _ = Grade.objects.filter(
+                pk=delete_id, teacher=request.user,
+                subject_id=subject_id, student__school_class_id=class_id,
+            ).delete()
+            if deleted:
+                messages.success(request, 'Оценката е изтрита.')
+            else:
+                messages.error(request, 'Оценката не беше намерена.')
+            return redirect(f'{request.path}?class={class_id}&subject={subject_id}')
+
+        grade_type = request.POST.get('grade_type')
+        raw_date = request.POST.get('date') or str(date.today())
+        try:
+            grade_date = datetime.date.fromisoformat(raw_date)
+        except ValueError:
+            grade_date = date.today()
+
+        if grade_type not in dict(Grade.GRADE_TYPE_CHOICES):
+            messages.error(request, 'Невалиден вид оценка.')
+        elif grade_date > date.today():
+            messages.error(request, 'Датата не може да бъде в бъдещето.')
+        else:
+            is_final = grade_type in Grade.FINAL_TYPES
+            # Текущ брой текущи (нефинални) оценки на ученик — за проверка на тавана.
+            current_counts = Counter(
+                Grade.objects.filter(
+                    subject_id=subject_id, student__school_class_id=class_id,
+                ).exclude(grade_type__in=Grade.FINAL_TYPES).values_list('student_id', flat=True)
+            )
+            created = updated = skipped = limit_hit = 0
+            for s in students:
+                val = request.POST.get(f'value_{s.pk}', '').strip()
+                if not val:
+                    continue
+                if not (val.isdigit() and 2 <= int(val) <= 6):
+                    skipped += 1
+                    continue
+                note = request.POST.get(f'note_{s.pk}', '').strip()
+                if is_final:
+                    # Срочна/годишна — само една на ученик/предмет: обновяваме съществуващата.
+                    obj, was_created = Grade.objects.update_or_create(
+                        student=s, subject_id=subject_id,
+                        teacher=request.user, grade_type=grade_type,
+                        defaults={'value': val, 'date': grade_date, 'note': note},
+                    )
+                    created += was_created
+                    updated += not was_created
+                else:
+                    if current_counts[s.pk] >= MAX_CURRENT_GRADES:
+                        limit_hit += 1
+                        continue
+                    Grade.objects.create(
+                        student=s, subject_id=subject_id, teacher=request.user,
+                        value=val, grade_type=grade_type, date=grade_date, note=note,
+                    )
+                    current_counts[s.pk] += 1
+                    created += 1
+
+            if created or updated:
+                parts = []
+                if created:
+                    parts.append(f'{created} нови')
+                if updated:
+                    parts.append(f'{updated} обновени')
+                messages.success(request, f'Записани оценки: {", ".join(parts)}.')
+            else:
+                messages.info(request, 'Не бяха въведени оценки.')
+            if skipped:
+                messages.warning(request, f'{skipped} невалидни стойности бяха пропуснати (позволени са 2–6).')
+            if limit_hit:
+                messages.warning(request, f'{limit_hit} ученик(ци) вече имат максимума от '
+                                          f'{MAX_CURRENT_GRADES} текущи оценки — новите не бяха добавени.')
+            return redirect(f'{request.path}?class={class_id}&subject={subject_id}')
+
+    # Съществуващи оценки по избрания предмет, групирани по ученик.
+    grades_by_student = {}
+    if valid:
+        existing = Grade.objects.filter(
+            subject_id=subject_id, student__school_class_id=class_id,
+        ).select_related('student').order_by('pk')
+        for g in existing:
+            grades_by_student.setdefault(g.student_id, []).append(g)
+
+    # Прикачваме списъка с оценки и текущите срочни/годишни към всеки ученик.
+    rows = []
+    for s in students:
+        sgrades = grades_by_student.get(s.pk, [])
+        finals = {g.grade_type: g for g in sgrades if g.grade_type in Grade.FINAL_TYPES}
+        current = [g for g in sgrades if g.grade_type not in Grade.FINAL_TYPES]
+        rows.append({
+            'student': s, 'grades': current, 'finals': finals,
+            'at_limit': len(current) >= MAX_CURRENT_GRADES,
+        })
+
+    return render(request, 'teachers/grade_bulk.html', {
+        'classes': classes, 'subjects': subjects,
+        'selected_class': class_id, 'selected_subject': subject_id,
+        'rows': rows, 'valid': valid,
+        'grade_types': Grade.GRADE_TYPE_CHOICES,
+        'grade_values': Grade.GRADE_VALUES,
+        'max_current': MAX_CURRENT_GRADES,
         'today': date.today(),
     })
 

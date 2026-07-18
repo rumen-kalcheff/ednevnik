@@ -1,8 +1,19 @@
 {% extends 'base.html' %}
 {% block title %}Моите оценки{% endblock %}
+
+{% block extra_css %}
+<style>
+    .grade-badge { font-size: .8rem; }
+    .grades-row { display: flex; flex-wrap: nowrap; align-items: center; gap: 3px; }
+    td.grades-cell { min-width: 260px; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4><i class="bi bi-award"></i> Моите оценки</h4>
+    <h4><i class="bi bi-award"></i> Моите оценки
+        {% if school_class %}<span class="badge bg-primary align-middle ms-2">{{ school_class }}</span>{% endif %}
+    </h4>
     <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Табло</a>
 </div>
 
@@ -20,38 +31,5 @@
     </div>
 </form>
 
-<div class="card shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Предмет</th>
-                    <th>Оценка</th>
-                    <th>Вид</th>
-                    <th>Дата</th>
-                    <th>Учител</th>
-                    <th>Забележка</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for g in grades %}
-                <tr>
-                    <td>{{ g.subject }}</td>
-                    <td>
-                        <span class="badge fs-6 {% if g.value >= 5 %}bg-success{% elif g.value == 4 %}bg-warning text-dark{% elif g.value == 3 %}bg-warning text-dark{% else %}bg-danger{% endif %}">
-                            {{ g.value }}
-                        </span>
-                    </td>
-                    <td>{{ g.get_grade_type_display }}</td>
-                    <td>{{ g.date }}</td>
-                    <td>{{ g.teacher.get_full_name }}</td>
-                    <td class="text-muted small">{{ g.note }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="6" class="text-center text-muted py-4">Няма въведени оценки.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+{% include 'partials/grades_by_subject.html' %}
 {% endblock %}

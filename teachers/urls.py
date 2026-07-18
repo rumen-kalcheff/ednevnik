@@ -5,6 +5,7 @@ urlpatterns = [
     # Оценки
     path('grades/', views.grade_list, name='grade_list'),
     path('grades/add/', views.grade_add, name='grade_add'),
+    path('grades/bulk/', views.grade_bulk, name='grade_bulk'),
     path('grades/<int:pk>/edit/', views.grade_edit, name='grade_edit'),
     path('grades/<int:pk>/delete/', views.grade_delete, name='grade_delete'),
     # Отсъствия

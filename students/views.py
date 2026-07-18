@@ -20,14 +20,16 @@ def grade_list(request):
     if subject_id:
         grades = grades.filter(subject_id=subject_id)
 
-    subjects = profile.grades.values_list('subject', flat=True).distinct()
     from school.models import Subject
-    subjects = Subject.objects.filter(pk__in=subjects)
+    from grades.utils import group_grades_by_subject
+    subject_ids = profile.grades.values_list('subject', flat=True).distinct()
+    subjects = Subject.objects.filter(pk__in=subject_ids)
 
     return render(request, 'students/grade_list.html', {
-        'grades': grades,
+        'sections': group_grades_by_subject(grades),
         'subjects': subjects,
         'selected_subject': subject_id,
+        'school_class': profile.school_class,
     })
 
 
