@@ -35,26 +35,29 @@
     </div>
 </form>
 
-<div class="row g-3">
-    {% for m in materials %}
-    <div class="col-md-6 col-lg-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <h6 class="card-title"><i class="bi bi-file-earmark-text"></i> {{ m.title }}</h6>
-                <p class="text-muted small mb-1">{{ m.subject }} &middot; {{ m.teacher.get_full_name }}</p>
-                <p class="text-muted small mb-2">{{ m.uploaded_at|date:"d.m.Y" }}</p>
-                {% if m.description %}<p class="small mb-2">{{ m.description }}</p>{% endif %}
-                <a href="{{ m.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
-                    <i class="bi bi-download"></i> Изтегли
-                </a>
+{% for group in material_groups %}
+<div class="mb-4">
+    <h6 class="text-uppercase text-muted small fw-bold mb-2"><i class="bi bi-journal-bookmark"></i> {{ group.subject }}</h6>
+    <div class="row g-3">
+        {% for m in group.materials %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-file-earmark-text"></i> {{ m.title }}</h6>
+                    <p class="text-muted small mb-1">{{ m.teacher.get_full_name }}</p>
+                    <p class="text-muted small mb-2">{{ m.uploaded_at|date:"d.m.Y" }}</p>
+                    {% if m.description %}<p class="small mb-2">{{ m.description }}</p>{% endif %}
+                    <a href="{{ m.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                        <i class="bi bi-download"></i> Изтегли
+                    </a>
+                </div>
             </div>
         </div>
+        {% endfor %}
     </div>
-    {% empty %}
-    <div class="col-12">
-        <div class="alert alert-info">Няма качени материали за класа на детето.</div>
-    </div>
-    {% endfor %}
 </div>
+{% empty %}
+<div class="alert alert-info">Няма качени материали за класа на детето.</div>
+{% endfor %}
 {% endif %}
 {% endblock %}

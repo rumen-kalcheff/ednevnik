@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% block title %}Моят клас{% endblock %}
+
+{% block extra_css %}
+<style>
+    .grade-badge { font-size: .8rem; }
+    .grades-row { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
+    td.grades-cell { min-width: 260px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-mortarboard"></i> Моят клас</h4>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Табло</a>
+</div>
+
+{% if not school_class %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> Вие не сте класен ръководител на клас.
+</div>
+{% else %}
+
+<div class="card border-primary shadow-sm mb-4">
+    <div class="card-body">
+        <span class="badge bg-primary"><i class="bi bi-mortarboard"></i> Класен ръководител</span>
+        <h5 class="mt-2 mb-1">Клас {{ school_class.name }}</h5>
+        <p class="text-muted small mb-0">
+            Това е Вашият клас. Виждате оценките и отсъствията на всички ученици — по всички предмети,
+            включително тези, които не преподавате.
+        </p>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center border-0 bg-light">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-dark">{{ student_count }}</div>
+                <div class="text-muted small">Ученици</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-0 bg-primary bg-opacity-10">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-primary">{{ class_average|default:"—" }}</div>
+                <div class="text-muted small">Среден успех</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-0 bg-danger bg-opacity-10">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-danger">{{ total_unexcused }}</div>
+                <div class="text-muted small">Неизвинени отсъствия</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-0 bg-success bg-opacity-10">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-success">{{ total_excused }}</div>
+                <div class="text-muted small">Извинени отсъствия</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-bold">Ученици</span>
+        <span class="text-muted small"><i class="bi bi-info-circle"></i> Кликни върху ученик за оценки и отсъствия</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:3rem;">№</th>
+                    <th>Ученик</th>
+                    <th class="text-center">Среден успех</th>
+                    <th class="text-center">Неизвинени</th>
+                    <th class="text-center">Извинени</th>
+                    <th class="text-center">Общо отс.</th>
+                    <th style="width:2.5rem;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr data-bs-toggle="collapse" data-bs-target="#student-detail-{{ forloop.counter }}" role="button">
+                    <td class="text-muted">{{ forloop.counter }}</td>
+                    <td>{{ row.student.user.get_full_name }}</td>
+                    <td class="text-center">
+                        {% if row.average %}
+                        <span class="badge px-3 {% if row.average >= 4.5 %}bg-success{% elif row.average >= 3 %}bg-warning text-dark{% else %}bg-danger{% endif %}">{{ row.average }}</span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-center">
+                        <span class="badge px-3 {% if row.unexcused %}bg-danger{% else %}bg-light text-muted border{% endif %}">{{ row.unexcused }}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge px-3 {% if row.excused %}bg-success{% else %}bg-light text-muted border{% endif %}">{{ row.excused }}</span>
+                    </td>
+                    <td class="text-center fw-bold">{{ row.total_absences }}</td>
+                    <td class="text-center text-muted"><i class="bi bi-chevron-down"></i></td>
+                </tr>
+                <tr>
+                    <td colspan="7" class="p-0 border-0">
+                        <div class="collapse" id="student-detail-{{ forloop.counter }}">
+                            <div class="bg-light px-4 py-3">
+                                <h6 class="text-uppercase text-muted small fw-bold mb-2"><i class="bi bi-award"></i> Оценки по предмети</h6>
+                                {% include 'partials/grades_by_subject.html' with sections=row.sections %}
+
+                                <h6 class="text-uppercase text-muted small fw-bold mb-2 mt-4"><i class="bi bi-calendar-x"></i> Отсъствия</h6>
+                                {% if row.absences %}
+                                <div class="card shadow-sm">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm mb-0">
+                                            <thead class="table-light">
+                                                <tr><th>Предмет</th><th>Дата</th><th>Вид</th><th>Учител</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for a in row.absences %}
+                                                <tr>
+                                                    <td>{{ a.subject }}</td>
+                                                    <td>{{ a.date|date:"d.m.Y" }}</td>
+                                                    <td>
+                                                        {% if a.absence_type == 'excused' %}
+                                                        <span class="badge bg-success">Извинено</span>
+                                                        {% else %}
+                                                        <span class="badge bg-danger">Неизвинено</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>{{ a.teacher.get_full_name }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <p class="text-muted small mb-0">Няма отсъствия.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">Няма ученици в този клас.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

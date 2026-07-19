@@ -33,36 +33,85 @@
     </div>
 </div>
 
+{% if subject_rows %}
 <div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-bold">Отсъствия по предмети</span>
+        <span class="text-muted small"><i class="bi bi-info-circle"></i> Кликни върху предмет за детайли</span>
+    </div>
     <div class="table-responsive">
-        <table class="table table-hover mb-0">
+        <table class="table table-hover mb-0 align-middle">
             <thead class="table-light">
                 <tr>
+                    <th style="width:3rem;">№</th>
                     <th>Предмет</th>
-                    <th>Дата</th>
-                    <th>Вид</th>
-                    <th>Учител</th>
+                    <th class="text-center">Неизвинени</th>
+                    <th class="text-center">Извинени</th>
+                    <th class="text-center">Общо</th>
+                    <th style="width:2.5rem;"></th>
                 </tr>
             </thead>
             <tbody>
-                {% for a in absences %}
-                <tr>
-                    <td>{{ a.subject }}</td>
-                    <td>{{ a.date }}</td>
-                    <td>
-                        {% if a.absence_type == 'excused' %}
-                        <span class="badge bg-success">Извинено</span>
-                        {% else %}
-                        <span class="badge bg-danger">Неизвинено</span>
-                        {% endif %}
+                {% for row in subject_rows %}
+                <tr data-bs-toggle="collapse" data-bs-target="#subject-detail-{{ forloop.counter }}" role="button">
+                    <td class="text-muted">{{ forloop.counter }}</td>
+                    <td><i class="bi bi-journal-bookmark"></i> {{ row.subject }}</td>
+                    <td class="text-center">
+                        <span class="badge px-3 {% if row.unexcused %}bg-danger{% else %}bg-light text-muted border{% endif %}">{{ row.unexcused }}</span>
                     </td>
-                    <td>{{ a.teacher.get_full_name }}</td>
+                    <td class="text-center">
+                        <span class="badge px-3 {% if row.excused %}bg-success{% else %}bg-light text-muted border{% endif %}">{{ row.excused }}</span>
+                    </td>
+                    <td class="text-center fw-bold">{{ row.total }}</td>
+                    <td class="text-center text-muted"><i class="bi bi-chevron-down"></i></td>
                 </tr>
-                {% empty %}
-                <tr><td colspan="4" class="text-center text-muted py-4">Няма отсъствия.</td></tr>
+                <tr>
+                    <td colspan="6" class="p-0 border-0">
+                        <div class="collapse" id="subject-detail-{{ forloop.counter }}">
+                            <div class="bg-light px-4 py-3">
+                                <table class="table table-sm table-borderless mb-0">
+                                    <thead>
+                                        <tr class="text-muted small">
+                                            <th>Дата</th><th>Вид</th><th>Учител</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for a in row.absences %}
+                                        <tr>
+                                            <td>{{ a.date|date:"d.m.Y" }}</td>
+                                            <td>
+                                                {% if a.absence_type == 'excused' %}
+                                                <span class="badge bg-success">Извинено</span>
+                                                {% else %}
+                                                <span class="badge bg-danger">Неизвинено</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ a.teacher.get_full_name }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
+            <tfoot class="table-light fw-bold">
+                <tr>
+                    <td colspan="2" class="text-end">Общо</td>
+                    <td class="text-center">{{ unexcused }}</td>
+                    <td class="text-center">{{ excused }}</td>
+                    <td class="text-center">{{ total }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
         </table>
     </div>
 </div>
+{% else %}
+<div class="card shadow-sm">
+    <div class="card-body text-center text-muted py-4">Няма отсъствия.</div>
+</div>
+{% endif %}
 {% endblock %}

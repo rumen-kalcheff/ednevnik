@@ -11,7 +11,8 @@
                     {% csrf_token %}
                     <div class="mb-3">
                         <label class="form-label">Дата</label>
-                        <input type="date" name="date" class="form-control" value="{{ absence.date }}" required>
+                        <input type="text" class="form-control" value="{{ absence.date|date:'d.m.Y' }}" disabled>
+                        <div class="form-text">Датата не може да се променя. При грешна дата изтрийте отсъствието и въведете ново.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Вид</label>

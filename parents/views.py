@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.db.models import Avg
+from itertools import groupby
 from accounts.decorators import role_required
 from school.models import Timetable
 from grades.models import Grade, Absence
@@ -94,22 +95,27 @@ def material_list(request):
     child, children = _get_child(request, parent)
 
     materials = Material.objects.none()
+    material_groups = []
     subjects = []
     selected_subject = request.GET.get('subject')
 
     if child and child.school_class:
         materials = Material.objects.filter(
             school_class=child.school_class
-        ).select_related('subject', 'teacher')
+        ).select_related('subject', 'teacher').order_by('subject__name', '-uploaded_at')
         if selected_subject:
             materials = materials.filter(subject_id=selected_subject)
         from school.models import Subject
         subjects = Subject.objects.filter(
             materials__school_class=child.school_class
         ).distinct()
+        material_groups = [
+            {'subject': subject, 'materials': list(group)}
+            for subject, group in groupby(materials, key=lambda m: m.subject)
+        ]
 
     return render(request, 'parents/material_list.html', {
-        'materials': materials, 'child': child, 'children': children,
+        'material_groups': material_groups, 'child': child, 'children': children,
         'subjects': subjects, 'selected_subject': selected_subject,
     })
 

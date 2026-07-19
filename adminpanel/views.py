@@ -11,8 +11,48 @@ from teachers.models import TeacherProfile
 
 @role_required('admin')
 def user_list(request):
-    users = User.objects.exclude(is_superuser=True).order_by('role', 'last_name')
-    return render(request, 'adminpanel/user_list.html', {'users': users})
+    selected_role = request.GET.get('role', '')
+    selected_class_id = request.GET.get('class', '')
+
+    base_qs = User.objects.exclude(is_superuser=True)
+    role_counts = {value: base_qs.filter(role=value).count() for value, _ in User.ROLE_CHOICES}
+
+    users = None
+    classes = None
+    student_groups = None
+
+    if selected_role == 'student':
+        classes = Class.objects.all().order_by('name')
+        classes_to_show = classes.filter(pk=selected_class_id) if selected_class_id else classes
+
+        student_groups = []
+        for school_class in classes_to_show:
+            class_users = base_qs.filter(
+                role='student', student_profile__school_class=school_class
+            ).order_by('last_name', 'first_name')
+            student_groups.append({'school_class': school_class, 'users': class_users})
+
+        if not selected_class_id:
+            unassigned = base_qs.filter(
+                role='student', student_profile__school_class__isnull=True
+            ).order_by('last_name', 'first_name')
+            if unassigned.exists():
+                student_groups.append({'school_class': None, 'users': unassigned})
+    else:
+        users = base_qs.select_related('student_profile__school_class')
+        if selected_role:
+            users = users.filter(role=selected_role)
+        users = users.order_by('role', 'last_name', 'first_name')
+
+    return render(request, 'adminpanel/user_list.html', {
+        'users': users,
+        'student_groups': student_groups,
+        'classes': classes,
+        'role_counts': role_counts,
+        'total_count': sum(role_counts.values()),
+        'selected_role': selected_role,
+        'selected_class_id': selected_class_id,
+    })
 
 
 @role_required('admin')

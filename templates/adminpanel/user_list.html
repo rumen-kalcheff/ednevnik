@@ -9,20 +9,128 @@
     </a>
 </div>
 
+<ul class="nav nav-pills mb-3">
+    <li class="nav-item">
+        <a class="nav-link {% if not selected_role %}active{% endif %}" href="{% url 'user_list' %}">
+            Всички <span class="badge bg-light text-dark ms-1">{{ total_count }}</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if selected_role == 'admin' %}active bg-dark{% endif %}" href="?role=admin">
+            Администратори <span class="badge bg-light text-dark ms-1">{{ role_counts.admin }}</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if selected_role == 'teacher' %}active bg-success{% endif %}" href="?role=teacher">
+            Учители <span class="badge bg-light text-dark ms-1">{{ role_counts.teacher }}</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if selected_role == 'student' %}active bg-primary{% endif %}" href="?role=student">
+            Ученици <span class="badge bg-light text-dark ms-1">{{ role_counts.student }}</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if selected_role == 'parent' %}active bg-warning text-dark{% endif %}" href="?role=parent">
+            Родители <span class="badge bg-light text-dark ms-1">{{ role_counts.parent }}</span>
+        </a>
+    </li>
+</ul>
+
+<div class="row g-2 align-items-end mb-3">
+    <div class="col-sm-6 col-md-4">
+        <div class="input-group input-group-sm">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" id="user-search" class="form-control"
+                   placeholder="Търси по име или потребителско име…" autocomplete="off">
+        </div>
+    </div>
+    {% if selected_role == 'student' %}
+    <div class="col-auto">
+        <form method="get" class="d-flex align-items-end">
+            <input type="hidden" name="role" value="student">
+            <div>
+                <label class="form-label mb-1 small">Клас</label>
+                <select name="class" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">— Всички класове —</option>
+                    {% for c in classes %}
+                    <option value="{{ c.pk }}" {% if selected_class_id == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+    {% if selected_class_id %}
+    <div class="col-auto">
+        <a href="?role=student" class="btn btn-sm btn-outline-secondary">Изчисти клас</a>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+
+<div id="no-results-msg" class="alert alert-warning d-none">Няма намерени резултати.</div>
+
+{% if selected_role == 'student' %}
+    {% for group in student_groups %}
+    <div class="card shadow-sm mb-3 user-group">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+            <span>
+                <i class="bi bi-building"></i>
+                {% if group.school_class %}Клас {{ group.school_class.name }}{% else %}Без клас{% endif %}
+            </span>
+            <span class="badge bg-primary">{{ group.users|length }}</span>
+        </div>
+        {% if group.users %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 users-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Имена</th>
+                        <th>Потребителско име</th>
+                        <th class="text-end">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in group.users %}
+                    <tr data-row>
+                        <td>{{ u.get_full_name }}</td>
+                        <td class="text-muted">{{ u.username }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'user_edit' u.pk %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'user_delete' u.pk %}" class="btn btn-sm btn-outline-danger ms-1">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="card-body text-muted">Няма ученици в този клас.</div>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div class="alert alert-info">Няма ученици за показване.</div>
+    {% endfor %}
+{% else %}
 <div class="card shadow-sm">
     <div class="table-responsive">
-        <table class="table table-hover mb-0">
+        <table class="table table-hover mb-0 users-table">
             <thead class="table-light">
                 <tr>
                     <th>Имена</th>
                     <th>Потребителско име</th>
                     <th>Роля</th>
+                    {% if not selected_role %}<th>Клас</th>{% endif %}
                     <th class="text-end">Действия</th>
                 </tr>
             </thead>
             <tbody>
                 {% for u in users %}
-                <tr>
+                <tr data-row>
                     <td>{{ u.get_full_name }}</td>
                     <td class="text-muted">{{ u.username }}</td>
                     <td>
@@ -32,6 +140,11 @@
                         {% elif u.role == 'parent' %}<span class="badge bg-warning text-dark">Родител</span>
                         {% endif %}
                     </td>
+                    {% if not selected_role %}
+                    <td class="text-muted">
+                        {% if u.role == 'student' and u.student_profile.school_class %}{{ u.student_profile.school_class.name }}{% else %}—{% endif %}
+                    </td>
+                    {% endif %}
                     <td class="text-end">
                         <a href="{% url 'user_edit' u.pk %}" class="btn btn-sm btn-outline-secondary">
                             <i class="bi bi-pencil"></i>
@@ -42,10 +155,31 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="4" class="text-center text-muted py-4">Няма потребители.</td></tr>
+                <tr><td colspan="{% if not selected_role %}5{% else %}4{% endif %}" class="text-center text-muted py-4">Няма потребители в тази категория.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('user-search').addEventListener('input', function () {
+    const q = this.value.toLowerCase().trim();
+    let visible = 0;
+    document.querySelectorAll('.users-table tbody tr[data-row]').forEach(row => {
+        const show = !q || row.textContent.toLowerCase().includes(q);
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    document.querySelectorAll('.user-group').forEach(group => {
+        const hasVisible = group.querySelector('tbody tr[data-row]:not([style*="display: none"])');
+        group.style.display = hasVisible ? '' : 'none';
+    });
+    const msg = document.getElementById('no-results-msg');
+    if (msg) msg.classList.toggle('d-none', !q || visible > 0);
+});
+</script>
 {% endblock %}

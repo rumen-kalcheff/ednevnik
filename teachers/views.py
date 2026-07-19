@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Avg
 from collections import Counter
+from itertools import groupby
 from datetime import date
 from accounts.decorators import role_required
 from school.models import TeacherClassSubject, Timetable
@@ -12,6 +13,15 @@ from materials.models import Material
 
 def _teacher_assignments(user):
     return TeacherClassSubject.objects.filter(teacher=user).select_related('school_class', 'subject')
+
+
+def _homeroom_class(user):
+    """Класът, на който потребителят е класен ръководител, или None."""
+    from school.models import Class
+    try:
+        return user.homeroom_class
+    except Class.DoesNotExist:
+        return None
 
 
 # Максимален брой текущи (нефинални) оценки на ученик за предмет.
@@ -277,16 +287,30 @@ def grade_delete(request, pk):
 def absence_list(request):
     assignments = _teacher_assignments(request.user)
     class_id = request.GET.get('class')
+    subject_id = request.GET.get('subject')
+    absence_type = request.GET.get('type')
 
     absences = Absence.objects.filter(teacher=request.user).select_related(
         'student__user', 'subject', 'student__school_class'
-    )
+    ).order_by('student__school_class__name', '-date')
     if class_id:
         absences = absences.filter(student__school_class_id=class_id)
+    if subject_id:
+        absences = absences.filter(subject_id=subject_id)
+    if absence_type in ('excused', 'unexcused'):
+        absences = absences.filter(absence_type=absence_type)
 
-    classes = [a.school_class for a in assignments]
+    absence_groups = [
+        {'school_class': school_class, 'absences': list(group)}
+        for school_class, group in groupby(absences, key=lambda a: a.student.school_class)
+    ]
+
+    classes = sorted({a.school_class for a in assignments}, key=lambda c: c.name)
+    subjects = sorted({a.subject for a in assignments}, key=lambda s: s.name)
     return render(request, 'teachers/absence_list.html', {
-        'absences': absences, 'classes': classes, 'selected_class': class_id,
+        'absence_groups': absence_groups, 'classes': classes, 'subjects': subjects,
+        'selected_class': class_id, 'selected_subject': subject_id,
+        'selected_type': absence_type,
     })
 
 
@@ -362,7 +386,6 @@ def absence_edit(request, pk):
     absence = get_object_or_404(Absence, pk=pk, teacher=request.user)
     if request.method == 'POST':
         absence.absence_type = request.POST.get('absence_type')
-        absence.date = request.POST.get('date')
         absence.save()
         messages.success(request, 'Отсъствието е актуализирано.')
         return redirect('absence_list')
@@ -385,8 +408,14 @@ def absence_delete(request, pk):
 
 @role_required('teacher')
 def material_list(request):
-    materials = Material.objects.filter(teacher=request.user).select_related('subject', 'school_class')
-    return render(request, 'teachers/material_list.html', {'materials': materials})
+    materials = Material.objects.filter(teacher=request.user).select_related(
+        'subject', 'school_class'
+    ).order_by('subject__name', 'school_class__name', '-uploaded_at')
+    material_groups = [
+        {'subject': subject, 'materials': list(group)}
+        for subject, group in groupby(materials, key=lambda m: m.subject)
+    ]
+    return render(request, 'teachers/material_list.html', {'material_groups': material_groups})
 
 
 @role_required('teacher')
@@ -499,6 +528,67 @@ def statistics(request):
     return render(request, 'teachers/statistics.html', {
         'stats': stats,
         'chart_data': chart_data,
+    })
+
+
+# ── Класен ръководител ───────────────────────────────────────
+
+@role_required('teacher')
+def homeroom_overview(request):
+    """Обзор на СВОЯ клас за класния ръководител: всички оценки и
+    отсъствия на учениците, вкл. по предмети, които той не преподава."""
+    from grades.utils import group_grades_by_subject
+
+    school_class = _homeroom_class(request.user)
+    if not school_class:
+        return render(request, 'teachers/homeroom.html', {'school_class': None})
+
+    students = StudentProfile.objects.filter(
+        school_class=school_class
+    ).select_related('user').order_by('user__first_name', 'user__last_name')
+
+    rows = []
+    class_grade_sum = class_grade_count = 0
+    total_unexcused = total_excused = 0
+
+    for student in students:
+        grades = list(Grade.objects.filter(
+            student=student
+        ).select_related('subject', 'teacher'))
+        values = [g.value for g in grades]
+        average = round(sum(values) / len(values), 2) if values else None
+
+        absences = list(Absence.objects.filter(
+            student=student
+        ).select_related('subject', 'teacher').order_by('-date'))
+        unexcused = sum(1 for a in absences if a.absence_type == 'unexcused')
+        excused = len(absences) - unexcused
+
+        rows.append({
+            'student': student,
+            'average': average,
+            'sections': group_grades_by_subject(grades),
+            'absences': absences,
+            'unexcused': unexcused,
+            'excused': excused,
+            'total_absences': len(absences),
+        })
+
+        class_grade_sum += sum(values)
+        class_grade_count += len(values)
+        total_unexcused += unexcused
+        total_excused += excused
+
+    class_average = round(class_grade_sum / class_grade_count, 2) if class_grade_count else None
+
+    return render(request, 'teachers/homeroom.html', {
+        'school_class': school_class,
+        'rows': rows,
+        'student_count': students.count(),
+        'class_average': class_average,
+        'total_unexcused': total_unexcused,
+        'total_excused': total_excused,
+        'total_absences': total_unexcused + total_excused,
     })
 
 

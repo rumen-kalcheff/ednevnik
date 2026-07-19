@@ -2,6 +2,22 @@
 {% block title %}Учител — Табло{% endblock %}
 {% block content %}
 <h3 class="mb-4"><i class="bi bi-person-workspace"></i> Учителско табло</h3>
+
+{% if user.homeroom_class %}
+<div class="card border-primary shadow-sm mb-4">
+    <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            <span class="badge bg-primary mb-1"><i class="bi bi-mortarboard"></i> Класен ръководител</span>
+            <h5 class="mb-0">Вашият клас: {{ user.homeroom_class.name }}</h5>
+            <p class="text-muted small mb-0">Оценки и отсъствия на всички ученици от Вашия клас — по всички предмети.</p>
+        </div>
+        <a href="{% url 'homeroom_overview' %}" class="btn btn-primary">
+            <i class="bi bi-people"></i> Отвори моя клас
+        </a>
+    </div>
+</div>
+{% endif %}
+
 <div class="row g-4">
     <div class="col-md-3">
         <div class="card text-white bg-primary h-100">
