@@ -1,0 +1,13 @@
+{# Филтър по вид оценки. Очаква в контекста: period (current|term|annual). #}
+{# По избор: period_qs — префикс за query string, напр. "child=5&". #}
+<div class="btn-group btn-group-sm mb-4" role="group" aria-label="Вид оценки">
+    <a href="?{{ period_qs }}period=current" class="btn {% if period == 'current' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+        <i class="bi bi-pencil-square"></i> Текущи
+    </a>
+    <a href="?{{ period_qs }}period=term" class="btn {% if period == 'term' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+        <i class="bi bi-journal-check"></i> Срочни
+    </a>
+    <a href="?{{ period_qs }}period=annual" class="btn {% if period == 'annual' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+        <i class="bi bi-award"></i> Годишни
+    </a>
+</div>

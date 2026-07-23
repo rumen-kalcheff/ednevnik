@@ -1,6 +1,26 @@
 from .models import Grade
 
 
+# Периоди за статистика по вид оценки: (ключ, етикет, видове оценки)
+GRADE_PERIODS = [
+    ('current', 'Текущи', ['oral', 'written', 'current']),
+    ('term', 'Срочни', ['term1', 'term2']),
+    ('annual', 'Годишни', ['annual']),
+]
+_PERIOD_TYPES = {key: types for key, _label, types in GRADE_PERIODS}
+
+
+def resolve_period(request):
+    """Връща (period_key, grade_types) според GET параметъра ?period=.
+
+    По подразбиране 'current' (текущи оценки: устни, контролни, текущи).
+    """
+    period = request.GET.get('period', 'current')
+    if period not in _PERIOD_TYPES:
+        period = 'current'
+    return period, _PERIOD_TYPES[period]
+
+
 def group_grades_by_subject(grades):
     """Групира оценки на един ученик по предмет.
 

@@ -155,17 +155,23 @@ def teacher_contacts(request):
 @role_required('parent')
 def statistics(request):
     import json
+    from grades.utils import resolve_period
     parent = request.user.parent_profile
     child, children = _get_child(request, parent)
+    period, gtypes = resolve_period(request)
 
     stats = []
     overall_avg = None
 
     if child:
         from school.models import Subject
-        subjects = Subject.objects.filter(grades__student=child).distinct()
+        subjects = Subject.objects.filter(
+            grades__student=child, grades__grade_type__in=gtypes
+        ).distinct()
         for subject in subjects:
-            subject_grades = Grade.objects.filter(student=child, subject=subject)
+            subject_grades = Grade.objects.filter(
+                student=child, subject=subject, grade_type__in=gtypes
+            )
             avg = subject_grades.aggregate(avg=Avg('value'))['avg']
             stats.append({
                 'subject': subject,
@@ -173,7 +179,9 @@ def statistics(request):
                 'average': round(avg, 2) if avg else None,
                 'count': subject_grades.count(),
             })
-        raw_avg = Grade.objects.filter(student=child).aggregate(avg=Avg('value'))['avg']
+        raw_avg = Grade.objects.filter(
+            student=child, grade_type__in=gtypes
+        ).aggregate(avg=Avg('value'))['avg']
         overall_avg = round(raw_avg, 2) if raw_avg else None
 
     chart_data = json.dumps({
@@ -185,4 +193,6 @@ def statistics(request):
         'stats': stats, 'overall_avg': overall_avg,
         'child': child, 'children': children,
         'chart_data': chart_data,
+        'period': period,
+        'period_qs': f'child={child.pk}&' if child else '',
     })

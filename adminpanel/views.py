@@ -369,8 +369,10 @@ def admin_statistics(request):
     import json
     from django.db.models import Avg, Count
     from grades.models import Grade, Absence
+    from grades.utils import resolve_period
     from students.models import StudentProfile
 
+    period, gtypes = resolve_period(request)
     total_students = StudentProfile.objects.count()
     total_teachers = User.objects.filter(role='teacher').count()
     total_parents = User.objects.filter(role='parent').count()
@@ -380,13 +382,15 @@ def admin_statistics(request):
     total_absences = Absence.objects.count()
     excused = Absence.objects.filter(absence_type='excused').count()
     unexcused = Absence.objects.filter(absence_type='unexcused').count()
-    overall_avg = Grade.objects.aggregate(avg=Avg('value'))['avg']
+    overall_avg = Grade.objects.filter(grade_type__in=gtypes).aggregate(avg=Avg('value'))['avg']
 
     classes = Class.objects.prefetch_related('students').all()
     class_stats = []
     for c in classes:
         students = StudentProfile.objects.filter(school_class=c)
-        avg = Grade.objects.filter(student__school_class=c).aggregate(avg=Avg('value'))['avg']
+        avg = Grade.objects.filter(
+            student__school_class=c, grade_type__in=gtypes
+        ).aggregate(avg=Avg('value'))['avg']
         abs_count = Absence.objects.filter(student__school_class=c).count()
         class_stats.append({
             'class': c,
@@ -414,6 +418,7 @@ def admin_statistics(request):
         'overall_avg': round(overall_avg, 2) if overall_avg else None,
         'class_stats': class_stats,
         'chart_data': chart_data,
+        'period': period,
     })
 
 

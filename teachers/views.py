@@ -506,12 +506,15 @@ def schedule(request):
 @role_required('teacher')
 def statistics(request):
     import json
+    from grades.utils import resolve_period
+    period, gtypes = resolve_period(request)
     assignments = _teacher_assignments(request.user)
     stats = []
     for a in assignments:
         students = StudentProfile.objects.filter(school_class=a.school_class)
         avg = Grade.objects.filter(
-            subject=a.subject, student__school_class=a.school_class
+            subject=a.subject, student__school_class=a.school_class,
+            grade_type__in=gtypes,
         ).aggregate(avg=Avg('value'))['avg']
         stats.append({
             'class': a.school_class,
@@ -528,6 +531,7 @@ def statistics(request):
     return render(request, 'teachers/statistics.html', {
         'stats': stats,
         'chart_data': chart_data,
+        'period': period,
     })
 
 
@@ -537,12 +541,13 @@ def statistics(request):
 def homeroom_overview(request):
     """Обзор на СВОЯ клас за класния ръководител: всички оценки и
     отсъствия на учениците, вкл. по предмети, които той не преподава."""
-    from grades.utils import group_grades_by_subject
+    from grades.utils import group_grades_by_subject, resolve_period
 
     school_class = _homeroom_class(request.user)
     if not school_class:
         return render(request, 'teachers/homeroom.html', {'school_class': None})
 
+    period, gtypes = resolve_period(request)
     students = StudentProfile.objects.filter(
         school_class=school_class
     ).select_related('user').order_by('user__first_name', 'user__last_name')
@@ -555,7 +560,9 @@ def homeroom_overview(request):
         grades = list(Grade.objects.filter(
             student=student
         ).select_related('subject', 'teacher'))
-        values = [g.value for g in grades]
+        # Средният успех се смята само за избрания вид оценки; детайлната
+        # таблица по-долу винаги показва всички видове.
+        values = [g.value for g in grades if g.grade_type in gtypes]
         average = round(sum(values) / len(values), 2) if values else None
 
         absences = list(Absence.objects.filter(
@@ -589,6 +596,7 @@ def homeroom_overview(request):
         'total_unexcused': total_unexcused,
         'total_excused': total_excused,
         'total_absences': total_unexcused + total_excused,
+        'period': period,
     })
 
 

@@ -145,13 +145,19 @@ def teacher_contacts(request):
 @role_required('student')
 def statistics(request):
     import json
+    from grades.utils import resolve_period
     profile = request.user.student_profile
     from school.models import Subject
-    subjects = Subject.objects.filter(grades__student=profile).distinct()
+    period, gtypes = resolve_period(request)
+    subjects = Subject.objects.filter(
+        grades__student=profile, grades__grade_type__in=gtypes
+    ).distinct()
 
     stats = []
     for subject in subjects:
-        subject_grades = Grade.objects.filter(student=profile, subject=subject)
+        subject_grades = Grade.objects.filter(
+            student=profile, subject=subject, grade_type__in=gtypes
+        )
         avg = subject_grades.aggregate(avg=Avg('value'))['avg']
         stats.append({
             'subject': subject,
@@ -160,7 +166,9 @@ def statistics(request):
             'count': subject_grades.count(),
         })
 
-    overall_avg = Grade.objects.filter(student=profile).aggregate(avg=Avg('value'))['avg']
+    overall_avg = Grade.objects.filter(
+        student=profile, grade_type__in=gtypes
+    ).aggregate(avg=Avg('value'))['avg']
 
     chart_data = json.dumps({
         'labels': [s['subject'].name for s in stats],
@@ -171,4 +179,5 @@ def statistics(request):
         'stats': stats,
         'overall_avg': round(overall_avg, 2) if overall_avg else None,
         'chart_data': chart_data,
+        'period': period,
     })

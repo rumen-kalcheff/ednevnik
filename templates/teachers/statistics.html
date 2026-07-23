@@ -3,10 +3,14 @@
 {% block content %}
 <h4 class="mb-4"><i class="bi bi-bar-chart"></i> Статистики за успеваемост</h4>
 
+{% include 'partials/period_filter.html' %}
+
 {% if stats %}
 <div class="card shadow-sm mb-4">
     <div class="card-body">
-        <canvas id="avgChart" height="80"></canvas>
+        <div style="position: relative; height: 340px;">
+            <canvas id="avgChart"></canvas>
+        </div>
     </div>
 </div>
 {% endif %}
@@ -59,6 +63,8 @@ new Chart(document.getElementById('avgChart'), {
         }]
     },
     options: {
+        responsive: true,
+        maintainAspectRatio: false,
         scales: {
             y: { min: 1, max: 6, ticks: { stepSize: 1 } }
         },

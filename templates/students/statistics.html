@@ -1,10 +1,13 @@
 {% extends 'base.html' %}
+{% load grade_extras %}
 {% block title %}Моята успеваемост{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4><i class="bi bi-graph-up"></i> Моята успеваемост</h4>
     <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Табло</a>
 </div>
+
+{% include 'partials/period_filter.html' %}
 
 {% if overall_avg %}
 <div class="alert alert-primary mb-4">
@@ -15,7 +18,9 @@
 {% if stats %}
 <div class="card shadow-sm mb-4">
     <div class="card-body">
-        <canvas id="avgChart" height="100"></canvas>
+        <div style="position: relative; height: 360px;">
+            <canvas id="avgChart"></canvas>
+        </div>
     </div>
 </div>
 {% endif %}
@@ -28,7 +33,7 @@
                 <span class="fw-semibold">{{ s.subject }}</span>
                 {% if s.average %}
                 <span class="badge fs-6 {% if s.average >= 5 %}bg-success{% elif s.average >= 4 %}bg-warning text-dark{% elif s.average >= 3 %}bg-warning text-dark{% else %}bg-danger{% endif %}">
-                    Среден: {{ s.average }}
+                    {{ s.average|grade_name }}: {{ s.average }}
                 </span>
                 {% endif %}
             </div>
@@ -46,7 +51,7 @@
     </div>
     {% empty %}
     <div class="col-12">
-        <div class="alert alert-info">Все още няма въведени оценки.</div>
+        <div class="alert alert-info">Няма оценки от избрания вид.</div>
     </div>
     {% endfor %}
 </div>
@@ -71,6 +76,8 @@ new Chart(document.getElementById('avgChart'), {
         }]
     },
     options: {
+        responsive: true,
+        maintainAspectRatio: false,
         scales: {
             y: { min: 1, max: 6, ticks: { stepSize: 1 } }
         },
