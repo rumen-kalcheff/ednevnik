@@ -79,6 +79,20 @@
 const chartData = {{ chart_data|safe }};
 const colors = chartData.averages.map(v => v >= 5 ? '#198754' : v >= 4 ? '#ffc107' : v >= 3 ? '#fd7e14' : '#dc3545');
 
+// Пренася дълги имена на предмети на нов ред, за да стоят подравнени под своя стълб.
+function wrapLabel(label) {
+    const words = String(label).split(' ');
+    if (words.length < 2) return label;
+    const lines = [];
+    let cur = '';
+    for (const w of words) {
+        if (cur && (cur + ' ' + w).length > 13) { lines.push(cur); cur = w; }
+        else { cur = cur ? cur + ' ' + w : w; }
+    }
+    if (cur) lines.push(cur);
+    return lines;
+}
+
 new Chart(document.getElementById('avgChart'), {
     type: 'bar',
     data: {
@@ -94,7 +108,15 @@ new Chart(document.getElementById('avgChart'), {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-            y: { min: 1, max: 6, ticks: { stepSize: 1 } }
+            y: { min: 1, max: 6, ticks: { stepSize: 1 } },
+            x: {
+                ticks: {
+                    autoSkip: false,
+                    maxRotation: 0,
+                    minRotation: 0,
+                    callback: function (value) { return wrapLabel(this.getLabelForValue(value)); }
+                }
+            }
         },
         plugins: { legend: { display: false } }
     }

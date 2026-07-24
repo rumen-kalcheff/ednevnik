@@ -148,6 +148,21 @@
 <script>
 const data = {{ chart_data|safe }};
 
+// Пренася дълги имена на предмети на нов ред, за да стоят подравнени под своя стълб.
+function wrapLabel(label) {
+    const words = String(label).split(' ');
+    if (words.length < 2) return label;
+    const lines = [];
+    let cur = '';
+    for (const w of words) {
+        if (cur && (cur + ' ' + w).length > 13) { lines.push(cur); cur = w; }
+        else { cur = cur ? cur + ' ' + w : w; }
+    }
+    if (cur) lines.push(cur);
+    return lines;
+}
+const xTicks = { ticks: { autoSkip: false, maxRotation: 0, minRotation: 0, callback: function (value) { return wrapLabel(this.getLabelForValue(value)); } } };
+
 new Chart(document.getElementById('avgChart'), {
     type: 'bar',
     data: {
@@ -158,7 +173,7 @@ new Chart(document.getElementById('avgChart'), {
             backgroundColor: 'rgba(13,110,253,0.7)',
         }]
     },
-    options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 2, max: 6 } }, plugins: { legend: { display: false } } }
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 2, max: 6 }, x: xTicks }, plugins: { legend: { display: false } } }
 });
 
 new Chart(document.getElementById('absChart'), {
@@ -171,7 +186,7 @@ new Chart(document.getElementById('absChart'), {
             backgroundColor: 'rgba(220,53,69,0.7)',
         }]
     },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    options: { responsive: true, maintainAspectRatio: false, scales: { x: xTicks }, plugins: { legend: { display: false } } }
 });
 </script>
 {% endblock %}

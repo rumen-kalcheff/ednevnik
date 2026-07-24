@@ -2,7 +2,6 @@ from django.shortcuts import render, get_object_or_404
 from django.db.models import Avg
 from itertools import groupby
 from accounts.decorators import role_required
-from school.models import Timetable
 from grades.models import Grade, Absence
 from materials.models import Material
 from students.models import StudentProfile
@@ -65,28 +64,6 @@ def absence_list(request):
 
 
 @role_required('student')
-def schedule(request):
-    profile = request.user.student_profile
-    school_class = profile.school_class
-
-    entries = Timetable.objects.filter(
-        assignment__school_class=school_class
-    ).select_related('assignment__subject', 'assignment__teacher')
-
-    days = [1, 2, 3, 4, 5]
-    hours = list(range(1, 9))
-    grid = {day: {hour: None for hour in hours} for day in days}
-    for entry in entries:
-        grid[entry.day_of_week][entry.hour_number] = entry
-
-    day_names = dict(Timetable.DAY_CHOICES)
-    return render(request, 'students/schedule.html', {
-        'grid': grid, 'days': days, 'hours': hours, 'day_names': day_names,
-        'school_class': school_class,
-    })
-
-
-@role_required('student')
 def material_list(request):
     profile = request.user.student_profile
     subject_id = request.GET.get('subject')
@@ -119,13 +96,16 @@ def material_list(request):
 def class_info(request):
     profile = request.user.student_profile
     school_class = profile.school_class
-    classmates = StudentProfile.objects.filter(
+    # Целият клас, подреден по собствено име (както се водят класните списъци);
+    # номерът е позицията в тази подредба.
+    students = StudentProfile.objects.filter(
         school_class=school_class
-    ).select_related('user').exclude(user=request.user).order_by('user__last_name')
+    ).select_related('user').order_by('user__first_name', 'user__last_name')
 
     return render(request, 'students/class_info.html', {
         'school_class': school_class,
-        'classmates': classmates,
+        'students': students,
+        'me_id': profile.pk,
     })
 
 

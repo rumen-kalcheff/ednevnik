@@ -5,7 +5,7 @@ from collections import Counter
 from itertools import groupby
 from datetime import date
 from accounts.decorators import role_required
-from school.models import TeacherClassSubject, Timetable
+from school.models import TeacherClassSubject
 from students.models import StudentProfile
 from grades.models import Grade, Absence
 from materials.models import Material
@@ -171,8 +171,10 @@ def grade_bulk(request):
         else:
             is_final = grade_type in Grade.FINAL_TYPES
             # Текущ брой текущи (нефинални) оценки на ученик — за проверка на тавана.
+            # Само собствените на учителя (таванът важи за неговите оценки).
             current_counts = Counter(
                 Grade.objects.filter(
+                    teacher=request.user,
                     subject_id=subject_id, student__school_class_id=class_id,
                 ).exclude(grade_type__in=Grade.FINAL_TYPES).values_list('student_id', flat=True)
             )
@@ -222,9 +224,12 @@ def grade_bulk(request):
             return redirect(f'{request.path}?class={class_id}&subject={subject_id}')
 
     # Съществуващи оценки по избрания предмет, групирани по ученик.
+    # Само собствените на учителя — както в grade_list/grade_edit/grade_delete,
+    # за да съвпадат двата изгледа при предмет с повече от един учител.
     grades_by_student = {}
     if valid:
         existing = Grade.objects.filter(
+            teacher=request.user,
             subject_id=subject_id, student__school_class_id=class_id,
         ).select_related('student').order_by('pk')
         for g in existing:
@@ -481,26 +486,6 @@ def material_delete(request, pk):
     return render(request, 'teachers/confirm_delete.html', {'obj': material, 'type': 'материал'})
 
 
-# ── Разписание ────────────────────────────────────────────────
-
-@role_required('teacher')
-def schedule(request):
-    entries = Timetable.objects.filter(
-        assignment__teacher=request.user
-    ).select_related('assignment__school_class', 'assignment__subject')
-
-    days = [1, 2, 3, 4, 5]
-    hours = list(range(1, 9))
-    grid = {day: {hour: None for hour in hours} for day in days}
-    for entry in entries:
-        grid[entry.day_of_week][entry.hour_number] = entry
-
-    day_names = dict(Timetable.DAY_CHOICES)
-    return render(request, 'teachers/schedule.html', {
-        'grid': grid, 'days': days, 'hours': hours, 'day_names': day_names,
-    })
-
-
 # ── Статистики ────────────────────────────────────────────────
 
 @role_required('teacher')
@@ -665,7 +650,7 @@ def student_contacts(request):
     for school_class in classes_to_show:
         students = StudentProfile.objects.filter(
             school_class=school_class
-        ).select_related('user').order_by('user__last_name')
+        ).select_related('user').prefetch_related('parents__user').order_by('user__first_name', 'user__last_name')
         classes_with_students.append({'school_class': school_class, 'students': students})
 
     return render(request, 'teachers/student_contacts.html', {
@@ -683,6 +668,6 @@ def students_by_class(request):
     class_id = request.GET.get('class_id')
     students = StudentProfile.objects.filter(
         school_class_id=class_id
-    ).select_related('user').order_by('user__last_name')
+    ).select_related('user').order_by('user__first_name', 'user__last_name')
     data = [{'id': s.pk, 'name': s.user.get_full_name()} for s in students]
     return JsonResponse(data, safe=False)

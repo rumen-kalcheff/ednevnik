@@ -3,7 +3,6 @@ from django.contrib import messages
 from django.db.models import Avg
 from itertools import groupby
 from accounts.decorators import role_required
-from school.models import Timetable
 from grades.models import Grade, Absence
 from materials.models import Material
 from students.models import StudentProfile
@@ -62,30 +61,6 @@ def absence_list(request):
     return render(request, 'parents/absence_list.html', {
         'absences': absences, 'child': child, 'children': children,
         'excused': excused, 'unexcused': unexcused, 'total': excused + unexcused,
-    })
-
-
-@role_required('parent')
-def schedule(request):
-    parent = request.user.parent_profile
-    child, children = _get_child(request, parent)
-
-    grid = {}
-    days = [1, 2, 3, 4, 5]
-    hours = list(range(1, 9))
-    day_names = dict(Timetable.DAY_CHOICES)
-
-    if child and child.school_class:
-        entries = Timetable.objects.filter(
-            assignment__school_class=child.school_class
-        ).select_related('assignment__subject', 'assignment__teacher')
-        grid = {day: {hour: None for hour in hours} for day in days}
-        for entry in entries:
-            grid[entry.day_of_week][entry.hour_number] = entry
-
-    return render(request, 'parents/schedule.html', {
-        'grid': grid, 'days': days, 'hours': hours, 'day_names': day_names,
-        'child': child, 'children': children,
     })
 
 

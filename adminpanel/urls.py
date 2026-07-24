@@ -23,10 +23,6 @@ urlpatterns = [
     path('assignments/<int:pk>/delete/', views.assignment_delete, name='assignment_delete'),
     # Свързване родител ↔ ученик
     path('parent-link/', views.parent_link, name='parent_link'),
-    # Разписание
-    path('timetable/', views.timetable_list, name='timetable_list'),
-    path('timetable/add/', views.timetable_add, name='timetable_add'),
-    path('timetable/<int:pk>/delete/', views.timetable_delete, name='timetable_delete'),
     # Справки
     path('statistics/', views.admin_statistics, name='admin_statistics'),
     # Контакти

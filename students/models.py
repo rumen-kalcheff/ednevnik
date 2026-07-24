@@ -25,7 +25,7 @@ class StudentProfile(models.Model):
     class Meta:
         verbose_name = 'Ученик'
         verbose_name_plural = 'Ученици'
-        ordering = ['school_class', 'user__last_name']
+        ordering = ['school_class', 'user__first_name', 'user__last_name']
 
     def __str__(self):
         return f'{self.user.get_full_name()} — {self.school_class}'

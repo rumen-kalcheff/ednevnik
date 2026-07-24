@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from accounts.models import User
 from accounts.decorators import role_required
-from school.models import Class, Subject, TeacherClassSubject, Timetable
+from school.models import Class, Subject, TeacherClassSubject
 from students.models import StudentProfile, ParentProfile
 from teachers.models import TeacherProfile
 
@@ -287,81 +287,6 @@ def parent_link(request):
     return render(request, 'adminpanel/parent_link.html', {'parents': parents, 'students': students})
 
 
-# ── Разписание ────────────────────────────────────────────────
-
-@role_required('admin')
-def timetable_list(request):
-    class_id = request.GET.get('class')
-    classes = Class.objects.all()
-    entries = Timetable.objects.select_related(
-        'assignment__school_class', 'assignment__subject', 'assignment__teacher'
-    )
-    if class_id:
-        entries = entries.filter(assignment__school_class_id=class_id)
-
-    days = [1, 2, 3, 4, 5]
-    hours = list(range(1, 9))
-    day_names = dict(Timetable.DAY_CHOICES)
-
-    grid = {}
-    if class_id:
-        grid = {day: {hour: None for hour in hours} for day in days}
-        for entry in entries:
-            grid[entry.day_of_week][entry.hour_number] = entry
-
-    return render(request, 'adminpanel/timetable_list.html', {
-        'classes': classes, 'selected_class': class_id,
-        'grid': grid, 'days': days, 'hours': hours, 'day_names': day_names,
-        'entries': entries,
-    })
-
-
-@role_required('admin')
-def timetable_add(request):
-    classes = Class.objects.all()
-    assignments = TeacherClassSubject.objects.select_related('teacher', 'school_class', 'subject')
-    class_id = request.GET.get('class') or request.POST.get('class_filter')
-
-    if request.method == 'POST':
-        assignment_id = request.POST.get('assignment')
-        day = request.POST.get('day_of_week')
-        hour = request.POST.get('hour_number')
-
-        if not assignment_id:
-            return redirect(f'/admin-panel/timetable/add/?class={class_id or ""}')
-
-        assignment = get_object_or_404(TeacherClassSubject, pk=assignment_id)
-        if Timetable.objects.filter(
-            assignment__school_class=assignment.school_class,
-            day_of_week=day, hour_number=hour
-        ).exists():
-            messages.error(request, 'В този час вече има предмет за този клас.')
-        else:
-            Timetable.objects.create(assignment_id=assignment_id, day_of_week=day, hour_number=hour)
-            messages.success(request, 'Часът е добавен в разписанието.')
-            return redirect(f'/admin-panel/timetable/?class={assignment.school_class_id}')
-
-    if class_id:
-        assignments = assignments.filter(school_class_id=class_id)
-
-    return render(request, 'adminpanel/timetable_form.html', {
-        'classes': classes, 'assignments': assignments,
-        'days': Timetable.DAY_CHOICES, 'hours': Timetable.HOUR_CHOICES,
-        'selected_class': class_id,
-    })
-
-
-@role_required('admin')
-def timetable_delete(request, pk):
-    entry = get_object_or_404(Timetable, pk=pk)
-    class_id = entry.assignment.school_class_id
-    if request.method == 'POST':
-        entry.delete()
-        messages.success(request, 'Часът е премахнат от разписанието.')
-        return redirect(f'/admin-panel/timetable/?class={class_id}')
-    return render(request, 'adminpanel/confirm_delete.html', {'obj': entry, 'type': 'час от разписанието'})
-
-
 # ── Административни справки ───────────────────────────────────
 
 @role_required('admin')
@@ -459,7 +384,7 @@ def student_contacts(request):
     for school_class in classes_to_show:
         students = StudentProfile.objects.filter(
             school_class=school_class
-        ).select_related('user').order_by('user__last_name')
+        ).select_related('user').prefetch_related('parents__user').order_by('user__first_name', 'user__last_name')
         classes_with_students.append({'school_class': school_class, 'students': students})
 
     return render(request, 'adminpanel/student_contacts.html', {
