@@ -22,6 +22,8 @@ urlpatterns = [
     path('statistics/', views.statistics, name='teacher_statistics'),
     # Класен ръководител
     path('homeroom/', views.homeroom_overview, name='homeroom_overview'),
+    path('homeroom/absences/<int:pk>/excuse/', views.homeroom_absence_excuse,
+         name='homeroom_absence_excuse'),
     # Профил
     path('profile/', views.my_profile, name='teacher_profile'),
     # Контакти

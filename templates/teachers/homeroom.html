@@ -27,7 +27,8 @@
         <h5 class="mt-2 mb-1">Клас {{ school_class.name }}</h5>
         <p class="text-muted small mb-0">
             Това е Вашият клас. Виждате оценките и отсъствията на всички ученици — по всички предмети,
-            включително тези, които не преподавате.
+            включително тези, които не преподавате. Като класен ръководител можете да извинявате
+            отсъствията на своите ученици.
         </p>
     </div>
 </div>
@@ -57,7 +58,7 @@
     <div class="col-md-3">
         <div class="card text-center border-0 bg-danger bg-opacity-10">
             <div class="card-body">
-                <div class="fs-2 fw-bold text-danger">{{ total_unexcused }}</div>
+                <div class="fs-2 fw-bold text-danger" id="total-unexcused">{{ total_unexcused }}</div>
                 <div class="text-muted small">Неизвинени отсъствия</div>
             </div>
         </div>
@@ -65,7 +66,7 @@
     <div class="col-md-3">
         <div class="card text-center border-0 bg-success bg-opacity-10">
             <div class="card-body">
-                <div class="fs-2 fw-bold text-success">{{ total_excused }}</div>
+                <div class="fs-2 fw-bold text-success" id="total-excused">{{ total_excused }}</div>
                 <div class="text-muted small">Извинени отсъствия</div>
             </div>
         </div>
@@ -92,7 +93,8 @@
             </thead>
             <tbody>
                 {% for row in rows %}
-                <tr data-bs-toggle="collapse" data-bs-target="#student-detail-{{ forloop.counter }}" role="button">
+                <tr data-bs-toggle="collapse" data-bs-target="#student-detail-{{ forloop.counter }}" role="button"
+                    data-student-row="{{ row.student.pk }}">
                     <td class="text-muted">{{ forloop.counter }}</td>
                     <td>{{ row.student.user.get_full_name }}</td>
                     <td class="text-center">
@@ -101,12 +103,12 @@
                         {% else %}<span class="text-muted">—</span>{% endif %}
                     </td>
                     <td class="text-center">
-                        <span class="badge px-3 {% if row.unexcused %}bg-danger{% else %}bg-light text-muted border{% endif %}">{{ row.unexcused }}</span>
+                        <span class="badge px-3 js-student-unexcused {% if row.unexcused %}bg-danger{% else %}bg-light text-muted border{% endif %}">{{ row.unexcused }}</span>
                     </td>
                     <td class="text-center">
-                        <span class="badge px-3 {% if row.excused %}bg-success{% else %}bg-light text-muted border{% endif %}">{{ row.excused }}</span>
+                        <span class="badge px-3 js-student-excused {% if row.excused %}bg-success{% else %}bg-light text-muted border{% endif %}">{{ row.excused }}</span>
                     </td>
-                    <td class="text-center fw-bold">{{ row.total_absences }}</td>
+                    <td class="text-center fw-bold js-student-total">{{ row.total_absences }}</td>
                     <td class="text-center text-muted"><i class="bi bi-chevron-down"></i></td>
                 </tr>
                 <tr>
@@ -122,14 +124,14 @@
                                     <div class="table-responsive">
                                         <table class="table table-sm mb-0">
                                             <thead class="table-light">
-                                                <tr><th>Предмет</th><th>Дата</th><th>Вид</th><th>Учител</th></tr>
+                                                <tr><th>Предмет</th><th>Дата</th><th>Вид</th><th>Учител</th><th class="text-end">Действие</th></tr>
                                             </thead>
                                             <tbody>
                                                 {% for a in row.absences %}
                                                 <tr>
                                                     <td>{{ a.subject }}</td>
                                                     <td>{{ a.date|date:"d.m.Y" }}</td>
-                                                    <td>
+                                                    <td class="js-absence-type">
                                                         {% if a.absence_type == 'excused' %}
                                                         <span class="badge bg-success">Извинено</span>
                                                         {% else %}
@@ -137,6 +139,28 @@
                                                         {% endif %}
                                                     </td>
                                                     <td>{{ a.teacher.get_full_name }}</td>
+                                                    <td class="text-end">
+                                                        <form method="post" action="{% url 'homeroom_absence_excuse' a.pk %}"
+                                                              class="d-inline js-excuse-form"
+                                                              data-student="{{ row.student.pk }}"
+                                                              data-name="{{ row.student.user.get_full_name }}"
+                                                              data-subject="{{ a.subject }}"
+                                                              data-date="{{ a.date|date:'d.m.Y' }}">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="period" value="{{ period }}">
+                                                            {% if a.absence_type == 'excused' %}
+                                                            <input type="hidden" name="absence_type" value="unexcused">
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                                <i class="bi bi-x-circle"></i> Върни като неизвинено
+                                                            </button>
+                                                            {% else %}
+                                                            <input type="hidden" name="absence_type" value="excused">
+                                                            <button type="submit" class="btn btn-sm btn-success">
+                                                                <i class="bi bi-check2-circle"></i> Извини
+                                                            </button>
+                                                            {% endif %}
+                                                        </form>
+                                                    </td>
                                                 </tr>
                                                 {% endfor %}
                                             </tbody>
@@ -157,5 +181,135 @@
         </table>
     </div>
 </div>
+
+<!-- Потвърждение при промяна на вида отсъствие -->
+<div class="modal fade" id="excuseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="excuseModalTitle">Потвърждение</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Затвори"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2" id="excuseModalText"></p>
+                <p class="text-muted small mb-0" id="excuseModalDetails"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отказ</button>
+                <button type="button" class="btn" id="excuseModalConfirm"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="excuseToasts"></div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var modalEl = document.getElementById('excuseModal');
+    if (!modalEl) return;
+
+    var modal = new bootstrap.Modal(modalEl);
+    var titleEl = document.getElementById('excuseModalTitle');
+    var textEl = document.getElementById('excuseModalText');
+    var detailsEl = document.getElementById('excuseModalDetails');
+    var confirmBtn = document.getElementById('excuseModalConfirm');
+    var pendingForm = null;
+
+    function showToast(message, ok) {
+        var wrapper = document.createElement('div');
+        wrapper.className = 'toast align-items-center text-bg-' + (ok ? 'success' : 'danger') + ' border-0';
+        wrapper.innerHTML =
+            '<div class="d-flex">' +
+            '<div class="toast-body"></div>' +
+            '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>' +
+            '</div>';
+        wrapper.querySelector('.toast-body').textContent = message;
+        document.getElementById('excuseToasts').appendChild(wrapper);
+        var toast = new bootstrap.Toast(wrapper, { delay: 3000 });
+        wrapper.addEventListener('hidden.bs.toast', function () { wrapper.remove(); });
+        toast.show();
+    }
+
+    function setBadge(el, count, colorClass) {
+        el.textContent = count;
+        el.className = 'badge px-3 ' + el.className.split(' ').filter(function (c) {
+            return c.indexOf('js-student-') === 0;
+        }).join(' ') + ' ' + (count > 0 ? colorClass : 'bg-light text-muted border');
+    }
+
+    // Пренарежда реда след успешна промяна: етикет, бутон и броячите.
+    function applyResult(form, data) {
+        var row = form.closest('tr');
+        var typeCell = row.querySelector('.js-absence-type');
+        var excused = data.absence_type === 'excused';
+        typeCell.innerHTML = excused
+            ? '<span class="badge bg-success">Извинено</span>'
+            : '<span class="badge bg-danger">Неизвинено</span>';
+
+        form.querySelector('input[name="absence_type"]').value = excused ? 'unexcused' : 'excused';
+        var btn = form.querySelector('button[type="submit"]');
+        btn.className = 'btn btn-sm ' + (excused ? 'btn-outline-danger' : 'btn-success');
+        btn.innerHTML = excused
+            ? '<i class="bi bi-x-circle"></i> Върни като неизвинено'
+            : '<i class="bi bi-check2-circle"></i> Извини';
+
+        var summary = document.querySelector('tr[data-student-row="' + form.dataset.student + '"]');
+        if (summary) {
+            setBadge(summary.querySelector('.js-student-unexcused'), data.student_unexcused, 'bg-danger');
+            setBadge(summary.querySelector('.js-student-excused'), data.student_excused, 'bg-success');
+            summary.querySelector('.js-student-total').textContent = data.student_total;
+        }
+        document.getElementById('total-unexcused').textContent = data.class_unexcused;
+        document.getElementById('total-excused').textContent = data.class_excused;
+    }
+
+    document.querySelectorAll('.js-excuse-form').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            pendingForm = form;
+            var excusing = form.querySelector('input[name="absence_type"]').value === 'excused';
+            titleEl.textContent = excusing ? 'Извиняване на отсъствие' : 'Връщане като неизвинено';
+            textEl.textContent = excusing
+                ? 'Да бъде ли извинено това отсъствие?'
+                : 'Да бъде ли върнато това отсъствие като неизвинено?';
+            detailsEl.textContent = form.dataset.name + ' — ' + form.dataset.subject + ', ' + form.dataset.date;
+            confirmBtn.className = 'btn ' + (excusing ? 'btn-success' : 'btn-danger');
+            confirmBtn.textContent = excusing ? 'Извини' : 'Върни като неизвинено';
+            modal.show();
+        });
+    });
+
+    confirmBtn.addEventListener('click', function () {
+        if (!pendingForm) return;
+        var form = pendingForm;
+        pendingForm = null;
+        confirmBtn.disabled = true;
+
+        fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin',
+        })
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+            .then(function (res) {
+                if (res.ok && res.data.ok) {
+                    applyResult(form, res.data);
+                    showToast(res.data.message, true);
+                } else {
+                    showToast(res.data.message || 'Възникна грешка.', false);
+                }
+            })
+            .catch(function () { showToast('Възникна грешка при връзката със сървъра.', false); })
+            .finally(function () {
+                confirmBtn.disabled = false;
+                modal.hide();
+            });
+    });
+});
+</script>
 {% endblock %}

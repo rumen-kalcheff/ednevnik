@@ -1,4 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+from django.http import JsonResponse
 from django.contrib import messages
 from django.db.models import Avg
 from collections import Counter
@@ -583,6 +585,75 @@ def homeroom_overview(request):
         'total_absences': total_unexcused + total_excused,
         'period': period,
     })
+
+
+def _absence_counts(student, school_class):
+    """Брой извинени/неизвинени за ученика и за целия клас — за обновяване
+    на таблицата и картите след промяна на вида на отсъствие."""
+    student_total = Absence.objects.filter(student=student).count()
+    student_unexcused = Absence.objects.filter(
+        student=student, absence_type='unexcused'
+    ).count()
+    class_total = Absence.objects.filter(student__school_class=school_class).count()
+    class_unexcused = Absence.objects.filter(
+        student__school_class=school_class, absence_type='unexcused'
+    ).count()
+    return {
+        'student_unexcused': student_unexcused,
+        'student_excused': student_total - student_unexcused,
+        'student_total': student_total,
+        'class_unexcused': class_unexcused,
+        'class_excused': class_total - class_unexcused,
+        'class_total': class_total,
+    }
+
+
+@role_required('teacher')
+def homeroom_absence_excuse(request, pk):
+    """Класният ръководител извинява (или връща като неизвинено) отсъствие
+    на ученик от своя клас — независимо кой учител го е записал."""
+    school_class = _homeroom_class(request.user)
+    if not school_class:
+        messages.error(request, 'Вие не сте класен ръководител на клас.')
+        return redirect('dashboard')
+
+    absence = get_object_or_404(
+        Absence, pk=pk, student__school_class=school_class
+    )
+    # При заявка от страницата (fetch) връщаме JSON, за да обновим реда на
+    # място — без презареждане, без връщане в началото на страницата.
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    if request.method == 'POST':
+        new_type = request.POST.get('absence_type')
+        if new_type in dict(Absence.ABSENCE_TYPE_CHOICES):
+            absence.absence_type = new_type
+            absence.save(update_fields=['absence_type'])
+            text = ('Отсъствието е извинено.' if new_type == 'excused'
+                    else 'Отсъствието е върнато като неизвинено.')
+            if is_ajax:
+                return JsonResponse({
+                    'ok': True,
+                    'absence_type': new_type,
+                    'message': text,
+                    **_absence_counts(absence.student, school_class),
+                })
+            messages.success(request, text)
+        else:
+            if is_ajax:
+                return JsonResponse(
+                    {'ok': False, 'message': 'Невалиден вид отсъствие.'}, status=400
+                )
+            messages.error(request, 'Невалиден вид отсъствие.')
+
+    if is_ajax:
+        return JsonResponse({'ok': False, 'message': 'Невалидна заявка.'}, status=400)
+
+    period = request.POST.get('period')
+    url = reverse('homeroom_overview')
+    if period:
+        url = f'{url}?period={period}'
+    return redirect(url)
 
 
 # ── Моят профил ──────────────────────────────────────────────
