@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% block title %}Разписание по класове{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-grid-3x3"></i> Разписание по класове
+        <span class="badge bg-secondary ms-2">{{ year }}</span>
+    </h4>
+    <a href="{% url 'timetable_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Назад
+    </a>
+</div>
+
+<form method="get" class="card card-body shadow-sm mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small mb-1">Клас</label>
+            <select name="class" class="form-select" onchange="this.form.submit()">
+                <option value="">-- Избери клас --</option>
+                {% for c in classes %}
+                <option value="{{ c.pk }}" {% if school_class.pk == c.pk %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small mb-1">Учебна година</label>
+            <select name="year" class="form-select" onchange="this.form.submit()">
+                {% for y in years %}
+                <option value="{{ y.pk }}" {% if year.pk == y.pk %}selected{% endif %}>{{ y.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</form>
+
+{% if not school_class %}
+<div class="alert alert-info">Изберете клас, за да видите или редактирате разписанието му.</div>
+{% else %}
+
+{% if not setting %}
+<div class="alert alert-warning">
+    Клас {{ school_class }} няма зададена смяна за {{ year }} —
+    <a href="{% url 'timetable_class_settings' %}" class="alert-link">задайте смяна и чужди езици</a>,
+    преди да съставите разписанието.
+</div>
+{% endif %}
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <span class="fw-bold fs-5">{{ school_class }}</span>
+            {% if setting %}<span class="text-muted ms-2">{{ setting.shift }}</span>{% endif %}
+            <div class="mt-1">
+                {% if published %}
+                <span class="badge bg-success">Публикувано</span>
+                <span class="text-muted small">
+                    {{ published.published_at|date:'d.m.Y H:i' }}
+                    {% if published.published_by %}от {{ published.published_by.get_full_name }}{% endif %}
+                </span>
+                {% else %}
+                <span class="badge bg-light text-dark">Няма публикувано разписание</span>
+                {% endif %}
+                {% if draft %}
+                <span class="badge bg-warning text-dark ms-1">Чернова — вижда се само от вас</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            {% if draft %}
+                <form method="post" action="{% url 'timetable_publish' draft.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="year" value="{{ year.pk }}">
+                    <button class="btn btn-success btn-sm">
+                        <i class="bi bi-send"></i> Публикувай
+                    </button>
+                </form>
+                <a href="{% url 'timetable_discard_draft' draft.pk %}" class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-x-lg"></i> Откажи черновата
+                </a>
+            {% else %}
+                <form method="post" action="{% url 'timetable_start_editing' school_class.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="year" value="{{ year.pk }}">
+                    <button class="btn btn-primary btn-sm">
+                        <i class="bi bi-pencil-square"></i>
+                        {% if published %}Редактирай (създава чернова){% else %}Създай разписание{% endif %}
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if progress %}
+<div class="card shadow-sm mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list-check"></i> Изпълнение на седмичния хорариум</span>
+        <span class="badge {% if total_placed == total_required %}bg-success{% else %}bg-warning text-dark{% endif %}">
+            {{ total_placed }} / {{ total_required }} часа
+        </span>
+    </div>
+    <div class="card-body d-flex flex-wrap gap-2">
+        {% for row in progress %}
+        <span class="badge {% if row.missing == 0 %}bg-success{% elif row.missing < 0 %}bg-danger{% else %}bg-secondary{% endif %}">
+            {{ row.entry.subject }}: {{ row.placed }}/{{ row.entry.hours_per_week }}
+        </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if not periods %}
+<div class="alert alert-secondary">
+    Няма зададени учебни периоди за смяната на класа.
+</div>
+{% else %}
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-bordered align-middle mb-0" style="min-width:900px;">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:110px;">Час</th>
+                    {% for day, day_name in days %}
+                    <th class="text-center">{{ day_name }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td class="table-light">
+                        <div class="fw-bold">{{ row.period.number }}. час</div>
+                        <div class="small text-muted">
+                            {{ row.period.start_time|time:'H:i' }}–{{ row.period.end_time|time:'H:i' }}
+                        </div>
+                    </td>
+                    {% for cell in row.cells %}
+                    <td class="p-2">
+                        {% if cell.lesson %}
+                        <div class="fw-bold small">{{ cell.lesson.subject }}</div>
+                        <div class="small text-muted">
+                            <i class="bi bi-person"></i> {{ cell.lesson.teacher.get_full_name }}
+                        </div>
+                        <div class="small text-muted">
+                            <i class="bi bi-door-closed"></i> {{ cell.lesson.room }}
+                        </div>
+                        {% if draft %}
+                        <div class="mt-1">
+                            <a href="{% url 'lesson_edit' cell.lesson.pk %}"
+                               class="btn btn-sm btn-outline-primary py-0 px-1">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'lesson_delete' cell.lesson.pk %}"
+                               class="btn btn-sm btn-outline-danger py-0 px-1">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </div>
+                        {% endif %}
+                        {% elif draft %}
+                        <a href="{% url 'lesson_add' %}?class={{ school_class.pk }}&day={{ cell.day }}&period={{ row.period.pk }}&year={{ year.pk }}"
+                           class="btn btn-sm btn-outline-secondary w-100 py-0">
+                            <i class="bi bi-plus-lg"></i>
+                        </a>
+                        {% else %}
+                        <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if not draft %}
+<p class="text-muted small mt-2">
+    <i class="bi bi-info-circle"></i>
+    Разписанието се редактира само в чернова. Публикуваната версия остава видима за
+    учители, ученици и родители, докато не публикувате новата.
+</p>
+{% endif %}
+
+{% endif %}
+{% endblock %}

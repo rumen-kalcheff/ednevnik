@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} час{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-plus"></i> {{ action }} час — клас {{ school_class }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="school_class" value="{{ school_class.pk }}">
+                    <input type="hidden" name="year" value="{{ year.pk }}">
+
+                    <div class="row">
+                        <div class="col mb-3">
+                            <label class="form-label">Учебен ден</label>
+                            <select name="day_of_week" class="form-select" required>
+                                {% for day, day_name in days %}
+                                <option value="{{ day }}"
+                                    {% if selected_day|stringformat:'s' == day|stringformat:'s' %}selected{% endif %}>
+                                    {{ day_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col mb-3">
+                            <label class="form-label">Пореден час</label>
+                            <select name="period" class="form-select" required>
+                                {% for period in periods %}
+                                <option value="{{ period.pk }}"
+                                    {% if selected_period|stringformat:'s' == period.pk|stringformat:'s' %}selected{% endif %}>
+                                    {{ period.number }}. час ({{ period.start_time|time:'H:i' }}–{{ period.end_time|time:'H:i' }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if setting %}
+                            <div class="form-text">{{ setting.shift }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Предмет</label>
+                        <select name="subject" id="subject-select" class="form-select" required>
+                            <option value="">-- Избери предмет --</option>
+                            {% for subject in subjects %}
+                            <option value="{{ subject.pk }}"
+                                {% if obj.subject_id == subject.pk %}selected{% endif %}>{{ subject.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Показват се само предметите от седмичния хорариум на класа.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Преподавател</label>
+                        <select name="teacher" id="teacher-select" class="form-select" required>
+                            <option value="">-- Първо избери предмет --</option>
+                            {% for a in assignments %}
+                            <option value="{{ a.teacher_id }}" data-subject="{{ a.subject_id }}"
+                                {% if obj.teacher_id == a.teacher_id %}selected{% endif %}>
+                                {{ a.teacher.get_full_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Само преподаватели, назначени по предмета за този клас.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Учебна зала</label>
+                        <select name="room" class="form-select" required>
+                            <option value="">-- Избери зала --</option>
+                            {% for room in rooms %}
+                            <option value="{{ room.pk }}" {% if obj.room_id == room.pk %}selected{% endif %}>
+                                {{ room.name }} ({{ room.get_room_type_display }}, {{ room.capacity }} места)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> {{ action }}
+                        </button>
+                        <a href="{% url 'timetable_grid' %}?class={{ school_class.pk }}&year={{ year.pk }}"
+                           class="btn btn-secondary">Отказ</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Показваме само преподавателите, назначени по избрания предмет.
+// Проверката се прави и на сървъра — това е само удобство за въвеждане.
+const subjectSelect = document.getElementById('subject-select');
+const teacherSelect = document.getElementById('teacher-select');
+const allTeacherOptions = Array.from(teacherSelect.querySelectorAll('option[data-subject]'));
+
+function filterTeachers() {
+    const subjectId = subjectSelect.value;
+    const selected = teacherSelect.value;
+    teacherSelect.innerHTML = '';
+
+    if (!subjectId) {
+        teacherSelect.innerHTML = '<option value="">-- Първо избери предмет --</option>';
+        return;
+    }
+    const matching = allTeacherOptions.filter(o => o.dataset.subject === subjectId);
+    if (matching.length === 0) {
+        teacherSelect.innerHTML = '<option value="">-- няма назначен преподавател --</option>';
+        return;
+    }
+    teacherSelect.innerHTML = '<option value="">-- Избери преподавател --</option>';
+    matching.forEach(option => {
+        const copy = option.cloneNode(true);
+        copy.selected = (copy.value === selected);
+        teacherSelect.appendChild(copy);
+    });
+}
+
+subjectSelect.addEventListener('change', filterTeachers);
+filterTeachers();
+</script>
+{% endblock %}

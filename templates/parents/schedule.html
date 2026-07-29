@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Разписание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-calendar3"></i> Разписание
+        {% if school_class %}<span class="badge bg-primary ms-2">{{ school_class }}</span>{% endif %}
+    </h4>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Назад
+    </a>
+</div>
+
+{% if children.count > 1 %}
+<form method="get" class="card card-body shadow-sm mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small mb-1">Дете</label>
+            <select name="child" class="form-select" onchange="this.form.submit()">
+                {% for c in children %}
+                <option value="{{ c.pk }}" {% if child.pk == c.pk %}selected{% endif %}>
+                    {{ c.user.get_full_name }} ({{ c.school_class }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</form>
+{% endif %}
+
+{% if not child %}
+<div class="alert alert-warning">Нямате свързани деца.</div>
+{% elif not school_class %}
+<div class="alert alert-warning">{{ child.user.get_full_name }} не е разпределен(а) в клас.</div>
+{% else %}
+
+{% if setting %}
+<p class="text-muted small">
+    {{ child.user.get_full_name }} &nbsp;|&nbsp; {{ setting.shift }}
+    {% if setting.first_language %}
+    &nbsp;|&nbsp; Първи чужд език: {{ setting.first_language }}
+    {% endif %}
+    {% if setting.second_language %}
+    &nbsp;|&nbsp; Втори чужд език: {{ setting.second_language }}
+    {% endif %}
+</p>
+{% endif %}
+
+{% if today_changes %}
+<div class="card border-warning shadow-sm mb-3">
+    <div class="card-header bg-warning-subtle">
+        <i class="bi bi-exclamation-triangle"></i> Промени за днес — {{ today|date:'d.m.Y' }}
+    </div>
+    <ul class="list-group list-group-flush">
+        {% for row in today_changes %}
+        <li class="list-group-item">
+            <strong>{{ row.lesson.period.number }}. час</strong>
+            <span class="text-muted small">({{ row.lesson.period.start_time|time:'H:i' }})</span>
+            — {{ row.lesson.subject }}:
+            {% if row.is_cancelled %}
+            <span class="badge bg-danger">Часът е отменен</span>
+            {% else %}
+            <span class="badge bg-info">
+                Замества {{ row.substitution.substitute_teacher.get_full_name }}
+            </span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% include 'partials/_week_grid.html' with show_class=False %}
+{% endif %}
+{% endblock %}

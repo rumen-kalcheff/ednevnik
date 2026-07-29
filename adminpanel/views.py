@@ -2,9 +2,15 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from accounts.models import User
 from accounts.decorators import role_required
-from school.models import Class, Subject, TeacherClassSubject
+from school.models import Class, Subject, TeacherClassSubject, ROOM_TYPE_CHOICES
 from students.models import StudentProfile, ParentProfile
 from teachers.models import TeacherProfile
+from timetable.models import Lesson
+
+
+def _used_in_timetable(**filters):
+    """Дали обектът участва в разписание (чернова или публикувано)."""
+    return Lesson.objects.filter(**filters).exists()
 
 
 # ── Потребители ──────────────────────────────────────────────
@@ -125,11 +131,18 @@ def user_edit(request, pk):
 
 @role_required('admin')
 def user_delete(request, pk):
+    """Преподавател, който участва в разписание, не се изтрива, а се деактивира."""
     user = get_object_or_404(User, pk=pk)
     if request.method == 'POST':
         name = user.get_full_name()
-        user.delete()
-        messages.success(request, f'Потребителят {name} е изтрит.')
+        if user.role == 'teacher' and _used_in_timetable(teacher=user):
+            user.is_active = False
+            user.save(update_fields=['is_active'])
+            messages.warning(
+                request, f'{name} участва в разписание — вместо изтриване е деактивиран(а).')
+        else:
+            user.delete()
+            messages.success(request, f'Потребителят {name} е изтрит.')
         return redirect('user_list')
     return render(request, 'adminpanel/confirm_delete.html', {'obj': user, 'type': 'потребител'})
 
@@ -183,10 +196,18 @@ def class_edit(request, pk):
 
 @role_required('admin')
 def class_delete(request, pk):
+    """Клас, който участва в разписание, не се изтрива, а се деактивира."""
     school_class = get_object_or_404(Class, pk=pk)
     if request.method == 'POST':
-        school_class.delete()
-        messages.success(request, 'Класът е изтрит.')
+        if _used_in_timetable(version__school_class=school_class):
+            school_class.is_active = False
+            school_class.save(update_fields=['is_active'])
+            messages.warning(
+                request,
+                f'Клас {school_class} участва в разписание — вместо изтриване е деактивиран.')
+        else:
+            school_class.delete()
+            messages.success(request, 'Класът е изтрит.')
         return redirect('class_list')
     return render(request, 'adminpanel/confirm_delete.html', {'obj': school_class, 'type': 'клас'})
 
@@ -206,10 +227,17 @@ def subject_create(request):
         if Subject.objects.filter(name=name).exists():
             messages.error(request, 'Предметът вече съществува.')
         else:
-            Subject.objects.create(name=name)
+            Subject.objects.create(
+                name=name,
+                required_room_type=request.POST.get('required_room_type', ''),
+                is_foreign_language=bool(request.POST.get('is_foreign_language')),
+                is_active=bool(request.POST.get('is_active')),
+            )
             messages.success(request, f'Предметът {name} е създаден.')
             return redirect('subject_list')
-    return render(request, 'adminpanel/subject_form.html', {'action': 'Създай'})
+    return render(request, 'adminpanel/subject_form.html', {
+        'action': 'Създай', 'room_types': ROOM_TYPE_CHOICES,
+    })
 
 
 @role_required('admin')
@@ -217,18 +245,30 @@ def subject_edit(request, pk):
     subject = get_object_or_404(Subject, pk=pk)
     if request.method == 'POST':
         subject.name = request.POST.get('name', '').strip()
+        subject.required_room_type = request.POST.get('required_room_type', '')
+        subject.is_foreign_language = bool(request.POST.get('is_foreign_language'))
+        subject.is_active = bool(request.POST.get('is_active'))
         subject.save()
         messages.success(request, 'Предметът е актуализиран.')
         return redirect('subject_list')
-    return render(request, 'adminpanel/subject_form.html', {'action': 'Редактирай', 'obj': subject})
+    return render(request, 'adminpanel/subject_form.html', {
+        'action': 'Редактирай', 'obj': subject, 'room_types': ROOM_TYPE_CHOICES,
+    })
 
 
 @role_required('admin')
 def subject_delete(request, pk):
+    """Предмет, който участва в разписание, не се изтрива, а се деактивира."""
     subject = get_object_or_404(Subject, pk=pk)
     if request.method == 'POST':
-        subject.delete()
-        messages.success(request, 'Предметът е изтрит.')
+        if _used_in_timetable(subject=subject):
+            subject.is_active = False
+            subject.save(update_fields=['is_active'])
+            messages.warning(
+                request, f'{subject} участва в разписание — вместо изтриване е деактивиран.')
+        else:
+            subject.delete()
+            messages.success(request, 'Предметът е изтрит.')
         return redirect('subject_list')
     return render(request, 'adminpanel/confirm_delete.html', {'obj': subject, 'type': 'предмет'})
 

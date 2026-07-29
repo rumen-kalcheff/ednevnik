@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% block title %}Смени и учебни периоди{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-clock-history"></i> Учебни години, смени и периоди</h4>
+    <a href="{% url 'timetable_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Назад
+    </a>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header"><i class="bi bi-calendar-range"></i> Учебни години</div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush mb-3">
+                    {% for y in years %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ y.name }}
+                        {% if y.is_current %}
+                            <span class="badge bg-success">Текуща</span>
+                        {% else %}
+                            <form method="post" class="m-0">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="set_current_year">
+                                <input type="hidden" name="school_year" value="{{ y.pk }}">
+                                <button class="btn btn-sm btn-outline-secondary">Направи текуща</button>
+                            </form>
+                        {% endif %}
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted">Няма създадени учебни години.</li>
+                    {% endfor %}
+                </ul>
+                <form method="post" class="row g-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_year">
+                    <div class="col-8">
+                        <input type="text" name="name" class="form-control form-control-sm"
+                               placeholder="напр. 2026/2027" required>
+                    </div>
+                    <div class="col-4">
+                        <button class="btn btn-primary btn-sm w-100">
+                            <i class="bi bi-plus-lg"></i> Добави
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header"><i class="bi bi-layers"></i> Смени</div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush mb-3">
+                    {% for shift in shifts %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ shift.name }}
+                        <span class="badge bg-light text-dark">{{ shift.periods.count }} учебни часа</span>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted">Няма създадени смени.</li>
+                    {% endfor %}
+                </ul>
+                <form method="post" class="row g-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_shift">
+                    <div class="col-6">
+                        <input type="text" name="name" class="form-control form-control-sm"
+                               placeholder="Наименование" required>
+                    </div>
+                    <div class="col-3">
+                        <input type="number" name="order" class="form-control form-control-sm"
+                               placeholder="№" min="1" value="1">
+                    </div>
+                    <div class="col-3">
+                        <button class="btn btn-primary btn-sm w-100">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% for shift in shifts %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-hourglass-split"></i> {{ shift.name }} — учебни часове</span>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_periods">
+            <input type="hidden" name="shift" value="{{ shift.pk }}">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-3">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:120px;">Пореден час</th>
+                            <th>Начало</th>
+                            <th>Край</th>
+                            <th class="text-end">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for period in shift.periods.all %}
+                        <tr>
+                            <td class="fw-bold">{{ period.number }}. час</td>
+                            <td>
+                                <input type="time" name="start_{{ period.pk }}"
+                                       value="{{ period.start_time|time:'H:i' }}"
+                                       class="form-control form-control-sm" style="max-width:140px;">
+                            </td>
+                            <td>
+                                <input type="time" name="end_{{ period.pk }}"
+                                       value="{{ period.end_time|time:'H:i' }}"
+                                       class="form-control form-control-sm" style="max-width:140px;">
+                            </td>
+                            <td class="text-end">
+                                <button type="submit" form="delete-period-{{ period.pk }}"
+                                        class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Да се изтрие ли {{ period.number }}. час?');">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-muted">Няма зададени учебни часове.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <button class="btn btn-primary btn-sm">
+                <i class="bi bi-check-lg"></i> Запази часовете
+            </button>
+        </form>
+
+        {% for period in shift.periods.all %}
+        <form method="post" id="delete-period-{{ period.pk }}" class="d-none">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_period">
+            <input type="hidden" name="period" value="{{ period.pk }}">
+        </form>
+        {% endfor %}
+
+        <hr>
+        <form method="post" class="row g-2 align-items-end">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_period">
+            <input type="hidden" name="shift" value="{{ shift.pk }}">
+            <div class="col-auto">
+                <label class="form-label small mb-0">Пореден час</label>
+                <input type="number" name="number" min="1" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-auto">
+                <label class="form-label small mb-0">Начало</label>
+                <input type="time" name="start_time" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-auto">
+                <label class="form-label small mb-0">Край</label>
+                <input type="time" name="end_time" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-plus-lg"></i> Добави час
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

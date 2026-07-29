@@ -16,6 +16,37 @@
                         <input type="text" name="name" class="form-control"
                                value="{{ obj.name|default:'' }}" placeholder="напр. Математика" required>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Подходящ тип зала
+                            <small class="text-muted">(незадължително)</small>
+                        </label>
+                        <select name="required_room_type" class="form-select">
+                            <option value="">— без изискване —</option>
+                            {% for value, label in room_types %}
+                            <option value="{{ value }}"
+                                {% if obj.required_room_type == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            Ако е зададен, разписанието допуска само зали от този тип.
+                        </div>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" name="is_foreign_language" class="form-check-input"
+                               id="is_foreign_language"
+                               {% if obj.is_foreign_language %}checked{% endif %}>
+                        <label class="form-check-label" for="is_foreign_language">
+                            Чужд език
+                        </label>
+                        <div class="form-text">
+                            Отбелязаните езици се избират като първи и втори чужд език на класа.
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="is_active" class="form-check-input" id="is_active"
+                               {% if not obj or obj.is_active %}checked{% endif %}>
+                        <label class="form-check-label" for="is_active">Активен</label>
+                    </div>
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-check-lg"></i> {{ action }}

@@ -21,8 +21,13 @@
             </thead>
             <tbody>
                 {% for c in classes %}
-                <tr>
-                    <td class="fw-bold">{{ c.name }}</td>
+                <tr {% if not c.is_active %}class="table-secondary"{% endif %}>
+                    <td class="fw-bold">
+                        {{ c.name }}
+                        {% if not c.is_active %}
+                        <span class="badge bg-secondary">деактивиран</span>
+                        {% endif %}
+                    </td>
                     <td>{{ c.homeroom_teacher.get_full_name|default:"—" }}</td>
                     <td>{{ c.students.count }}</td>
                     <td class="text-end">

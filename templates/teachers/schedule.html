@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Моето разписание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-calendar3"></i> Моето разписание
+        {% if year %}<span class="badge bg-secondary ms-2">{{ year }}</span>{% endif %}
+    </h4>
+    <div class="d-flex gap-2">
+        <a href="{% url 'teacher_lesson_topics' %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-journal-text"></i> Теми на уроци
+        </a>
+        <a href="{% url 'teacher_substitutions' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left-right"></i> Моите замествания
+        </a>
+    </div>
+</div>
+
+{% if today_rows %}
+<div class="card shadow-sm mb-3">
+    <div class="card-header">
+        <i class="bi bi-calendar-day"></i> Днес — {{ today|date:'d.m.Y' }}
+    </div>
+    <ul class="list-group list-group-flush">
+        {% for row in today_rows %}
+        <li class="list-group-item d-flex justify-content-between align-items-center
+            {% if row.is_cancelled %}list-group-item-warning{% endif %}">
+            <span>
+                <strong>{{ row.lesson.period.number }}. час</strong>
+                <span class="text-muted small">
+                    ({{ row.lesson.period.start_time|time:'H:i' }})
+                </span>
+                &nbsp; {{ row.lesson.subject }} — {{ row.lesson.version.school_class }}
+                <span class="text-muted small">({{ row.lesson.room }})</span>
+            </span>
+            <span>
+                {% if row.is_cancelled %}
+                <span class="badge bg-danger">Отменен час</span>
+                {% elif row.substitution and row.substitution.substitute_teacher %}
+                    {% if row.substitution.substitute_teacher == user %}
+                    <span class="badge bg-info">Заместване</span>
+                    {% else %}
+                    <span class="badge bg-secondary">
+                        Замества: {{ row.substitution.substitute_teacher.get_full_name }}
+                    </span>
+                    {% endif %}
+                {% endif %}
+            </span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<p class="text-muted small">
+    Общо часове седмично: <strong>{{ lesson_count }}</strong>.
+</p>
+
+{% if rows %}
+{% include 'partials/_week_grid.html' with show_class=True %}
+{% else %}
+<div class="alert alert-secondary">
+    Нямате часове в публикувано разписание{% if year %} за {{ year }}{% endif %}.
+</div>
+{% endif %}
+{% endblock %}

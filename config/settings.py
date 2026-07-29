@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'grades',
     'materials',
     'parents',
+    'timetable',
 ]
 
 MIDDLEWARE = [
@@ -107,6 +108,9 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
+# Таван на изчакването за връзка с пощенския сървър — без него бавен или
+# недостъпен SMTP може да блокира заявката за неограничено време.
+EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=10, cast=int)
 
 # Автоматично прекъсване на сесия след 2 часа неактивност (НФИ4)
 SESSION_COOKIE_AGE = 7200

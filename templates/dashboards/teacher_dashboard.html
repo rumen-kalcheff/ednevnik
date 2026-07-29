@@ -20,6 +20,36 @@
 
 <div class="row g-4">
     <div class="col-md-3">
+        <div class="card text-white bg-dark h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-calendar3 fs-1"></i>
+                <h5 class="card-title mt-2">Моето разписание</h5>
+                <p class="card-text small">Часове, класове, зали и замествания</p>
+                <a href="{% url 'teacher_schedule' %}" class="btn btn-light btn-sm">Отвори</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white h-100" style="background-color:#6f42c1;">
+            <div class="card-body text-center">
+                <i class="bi bi-journal-text fs-1"></i>
+                <h5 class="card-title mt-2">Теми на уроци</h5>
+                <p class="card-text small">Тема за конкретен проведен час</p>
+                <a href="{% url 'teacher_lesson_topics' %}" class="btn btn-light btn-sm">Отвори</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-person-x fs-1"></i>
+                <h5 class="card-title mt-2">Моите отсъствия</h5>
+                <p class="card-text small">Заявяване на отсъствие</p>
+                <a href="{% url 'teacher_my_absences' %}" class="btn btn-light btn-sm">Отвори</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
         <div class="card text-white bg-primary h-100">
             <div class="card-body text-center">
                 <i class="bi bi-pencil-square fs-1"></i>

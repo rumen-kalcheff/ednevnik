@@ -13,6 +13,11 @@ urlpatterns = [
     path('absences/add/', views.absence_add, name='absence_add'),
     path('absences/<int:pk>/edit/', views.absence_edit, name='absence_edit'),
     path('absences/<int:pk>/delete/', views.absence_delete, name='absence_delete'),
+    # Разписание
+    path('schedule/', views.schedule, name='teacher_schedule'),
+    path('topics/', views.lesson_topics, name='teacher_lesson_topics'),
+    path('my-absences/', views.my_absences, name='teacher_my_absences'),
+    path('substitutions/', views.my_substitutions, name='teacher_substitutions'),
     # Материали
     path('materials/', views.material_list, name='teacher_material_list'),
     path('materials/upload/', views.material_upload, name='material_upload'),

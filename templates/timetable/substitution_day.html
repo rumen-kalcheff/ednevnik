@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% block title %}Замествания по дата{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-arrow-left-right"></i> Замествания за {{ date|date:'d.m.Y' }}</h4>
+    <a href="{% url 'timetable_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Назад
+    </a>
+</div>
+
+<form method="get" class="card card-body shadow-sm mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label small mb-1">Дата</label>
+            <input type="date" name="date" value="{{ date|date:'Y-m-d' }}"
+                   class="form-control" onchange="this.form.submit()">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small mb-1">Клас</label>
+            <select name="class" class="form-select" onchange="this.form.submit()">
+                <option value="">-- Всички класове --</option>
+                {% for c in classes %}
+                <option value="{{ c.pk }}" {% if school_class.pk == c.pk %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</form>
+
+{% if is_weekend %}
+<div class="alert alert-secondary">Избраната дата е неучебен ден (събота или неделя).</div>
+{% endif %}
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Час</th>
+                    <th>Клас</th>
+                    <th>Предмет</th>
+                    <th>Преподавател</th>
+                    <th>Зала</th>
+                    <th style="width:36%;">Заместване</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr {% if row.is_cancelled %}class="table-warning"{% elif row.teacher_absent %}class="table-danger"{% endif %}>
+                    <td class="small text-nowrap">
+                        {{ row.lesson.period.number }}. час<br>
+                        <span class="text-muted">{{ row.lesson.period.start_time|time:'H:i' }}</span>
+                    </td>
+                    <td class="fw-bold">{{ row.lesson.version.school_class }}</td>
+                    <td class="small">{{ row.lesson.subject }}</td>
+                    <td class="small">
+                        {{ row.lesson.teacher.get_full_name }}
+                        {% if row.teacher_absent %}
+                        <span class="badge bg-danger">отсъства</span>
+                        {% endif %}
+                        {% if row.substitution.substitute_teacher %}
+                        <div class="text-success">
+                            <i class="bi bi-arrow-return-right"></i>
+                            {{ row.substitution.substitute_teacher.get_full_name }}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td class="small">{{ row.lesson.room }}</td>
+                    <td>
+                        {% if row.is_cancelled %}
+                        <div class="mb-1"><span class="badge bg-danger">Часът е отменен</span></div>
+                        {% endif %}
+                        <form method="post" action="{% url 'substitution_save' %}" class="row g-1">
+                            {% csrf_token %}
+                            <input type="hidden" name="lesson" value="{{ row.lesson.pk }}">
+                            <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <div class="col-7">
+                                <select name="substitute_teacher" class="form-select form-select-sm">
+                                    <option value="">-- Избери заместник --</option>
+                                    {% regroup row.candidates by teaches_subject as groups %}
+                                    {% for group in groups %}
+                                    <optgroup label="{% if group.grouper %}Води {{ row.lesson.subject }}{% else %}Други свободни преподаватели{% endif %}">
+                                        {% for candidate in group.list %}
+                                        <option value="{{ candidate.teacher.pk }}"
+                                            {% if row.substitution.substitute_teacher_id == candidate.teacher.pk %}selected{% endif %}>
+                                            {{ candidate.teacher.get_full_name }}
+                                        </option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-5 d-flex gap-1">
+                                <button name="action" value="assign" class="btn btn-sm btn-primary" title="Назначи заместник">
+                                    <i class="bi bi-person-check"></i>
+                                </button>
+                                <button name="action" value="cancel" class="btn btn-sm btn-outline-warning"
+                                        title="Отмени часа"
+                                        onclick="return confirm('Часът да бъде отменен за тази дата?');">
+                                    <i class="bi bi-slash-circle"></i>
+                                </button>
+                                {% if row.substitution %}
+                                <button name="action" value="clear" class="btn btn-sm btn-outline-secondary"
+                                        title="Премахни заместването">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">
+                    Няма часове в публикувано разписание за тази дата.
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<p class="text-muted small mt-2">
+    <i class="bi bi-info-circle"></i>
+    В списъка са само преподавателите, свободни в този ден и час, които не са отбелязани
+    като отсъстващи. Ако някой от тях води същия предмет, той е в отделна група най-отгоре.
+    Заместването важи само за конкретната дата и не променя седмичното разписание.
+</p>
+{% endblock %}

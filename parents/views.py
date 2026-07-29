@@ -171,3 +171,38 @@ def statistics(request):
         'period': period,
         'period_qs': f'child={child.pk}&' if child else '',
     })
+
+
+# ── Учебно разписание ─────────────────────────────────────────
+
+@role_required('parent')
+def schedule(request):
+    """Публикуваното разписание на класа на избраното дете."""
+    from datetime import date
+    from timetable import services
+    from timetable.models import SchoolYear
+
+    parent = request.user.parent_profile
+    child, children = _get_child(request, parent)
+    year = SchoolYear.current()
+
+    rows = []
+    setting = None
+    today_changes = []
+    school_class = child.school_class if child else None
+    if year and school_class:
+        setting = services.class_setting(year, school_class)
+        version = services.published_version(year, school_class)
+        rows = services.week_grid(version, services.class_periods(year, school_class))
+        today_changes = [
+            row for row in services.lessons_on_date(
+                year, date.today(), school_class=school_class)
+            if row['substitution']
+        ]
+
+    return render(request, 'parents/schedule.html', {
+        'child': child, 'children': children, 'school_class': school_class,
+        'year': year, 'setting': setting, 'rows': rows,
+        'today': date.today(), 'today_changes': today_changes,
+        'days': [(day, services.DAY_NAMES[day]) for day in services.DAYS],
+    })

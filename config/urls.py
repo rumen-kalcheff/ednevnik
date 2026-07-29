@@ -9,6 +9,7 @@ urlpatterns = [
     path('', home_view, name='home'),
     path('', include('accounts.urls')),
     path('admin-panel/', include('adminpanel.urls')),
+    path('admin-panel/timetable/', include('timetable.urls')),
     path('teacher/', include('teachers.urls')),
     path('student/', include('students.urls')),
     path('parent/', include('parents.urls')),

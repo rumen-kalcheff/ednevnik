@@ -161,3 +161,36 @@ def statistics(request):
         'chart_data': chart_data,
         'period': period,
     })
+
+
+# ── Учебно разписание ─────────────────────────────────────────
+
+@role_required('student')
+def schedule(request):
+    """Публикуваното разписание на класа на ученика."""
+    from datetime import date
+    from timetable import services
+    from timetable.models import SchoolYear
+
+    profile = request.user.student_profile
+    school_class = profile.school_class
+    year = SchoolYear.current()
+
+    rows = []
+    setting = None
+    today_changes = []
+    if year and school_class:
+        setting = services.class_setting(year, school_class)
+        version = services.published_version(year, school_class)
+        rows = services.week_grid(version, services.class_periods(year, school_class))
+        today_changes = [
+            row for row in services.lessons_on_date(
+                year, date.today(), school_class=school_class)
+            if row['substitution']
+        ]
+
+    return render(request, 'students/schedule.html', {
+        'school_class': school_class, 'year': year, 'setting': setting,
+        'rows': rows, 'today': date.today(), 'today_changes': today_changes,
+        'days': [(day, services.DAY_NAMES[day]) for day in services.DAYS],
+    })

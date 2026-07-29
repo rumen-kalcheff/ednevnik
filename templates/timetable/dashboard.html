@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% block title %}Учебно разписание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-calendar3"></i> Учебно разписание
+        {% if year %}<span class="badge bg-secondary ms-2">{{ year }}</span>{% endif %}
+    </h4>
+    <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Към таблото
+    </a>
+</div>
+
+{% if not year %}
+<div class="alert alert-warning">
+    Няма създадена учебна година.
+    <a href="{% url 'timetable_settings' %}" class="alert-link">Създайте я от настройките</a>.
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-grid-3x3 fs-1"></i>
+                <h6 class="card-title mt-2">Разписание по класове</h6>
+                <a href="{% url 'timetable_grid' %}" class="btn btn-light btn-sm">Отвори</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-list-ol fs-1"></i>
+                <h6 class="card-title mt-2">Седмичен хорариум</h6>
+                <a href="{% url 'timetable_curriculum' %}" class="btn btn-light btn-sm">Отвори</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-door-open fs-1"></i>
+                <h6 class="card-title mt-2">Учебни зали</h6>
+                <p class="card-text small mb-2">Активни: {{ room_count }}</p>
+                <a href="{% url 'room_list' %}" class="btn btn-light btn-sm">Отвори</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-clock-history fs-1"></i>
+                <h6 class="card-title mt-2">Смени и периоди</h6>
+                <a href="{% url 'timetable_settings' %}" class="btn btn-light btn-sm">Отвори</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-sliders fs-1"></i>
+                <h6 class="card-title mt-2">Смени и езици по класове</h6>
+                <a href="{% url 'timetable_class_settings' %}" class="btn btn-light btn-sm">Отвори</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-person-x fs-1"></i>
+                <h6 class="card-title mt-2">Отсъствия на учители</h6>
+                <p class="card-text small mb-2">Заявени: {{ pending_absences }}</p>
+                <a href="{% url 'teacher_absence_list' %}" class="btn btn-light btn-sm">Отвори</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white h-100" style="background-color:#6f42c1;">
+            <div class="card-body text-center">
+                <i class="bi bi-arrow-left-right fs-1"></i>
+                <h6 class="card-title mt-2">Замествания по дата</h6>
+                <a href="{% url 'substitution_day' %}" class="btn btn-light btn-sm">Отвори</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-dark h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-person-badge fs-1"></i>
+                <h6 class="card-title mt-2">Разписание на учител</h6>
+                <a href="{% url 'timetable_teacher_grid' %}" class="btn btn-light btn-sm">Отвори</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-building"></i> Състояние по класове</span>
+        <a href="{% url 'timetable_log' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-journal-text"></i> Дневник на действията
+        </a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Клас</th>
+                    <th>Смяна</th>
+                    <th>Чужди езици</th>
+                    <th>Състояние</th>
+                    <th class="text-end">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td class="fw-bold">{{ row.school_class }}</td>
+                    <td>
+                        {% if row.setting %}{{ row.setting.shift }}
+                        {% else %}<span class="text-muted">— не е зададена —</span>{% endif %}
+                    </td>
+                    <td class="small">
+                        {% if row.setting and row.setting.first_language %}
+                            {{ row.setting.first_language }} / {{ row.setting.second_language|default:'—' }}
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if row.published %}
+                            <span class="badge bg-success">Публикувано</span>
+                        {% else %}
+                            <span class="badge bg-light text-dark">Няма публикувано</span>
+                        {% endif %}
+                        {% if row.draft %}
+                            <span class="badge bg-warning text-dark">Чернова</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'timetable_grid' %}?class={{ row.school_class.pk }}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-grid-3x3"></i> Разписание
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">Няма създадени класове.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

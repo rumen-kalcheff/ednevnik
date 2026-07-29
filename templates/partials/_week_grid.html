@@ -1,0 +1,55 @@
+{% comment %}
+Седмична решетка на разписанието — само за преглед.
+Очаква: rows (от timetable.services), days и show_class:
+    show_class=True  — показва класа (разписание на учител)
+    show_class=False — показва преподавателя (разписание на клас)
+{% endcomment %}
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-bordered align-middle mb-0" style="min-width:900px;">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:110px;">Час</th>
+                    {% for day, day_name in days %}<th class="text-center">{{ day_name }}</th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td class="table-light">
+                        <div class="fw-bold">{{ row.period.number }}. час</div>
+                        <div class="small text-muted">
+                            {{ row.period.start_time|time:'H:i' }}–{{ row.period.end_time|time:'H:i' }}
+                        </div>
+                    </td>
+                    {% for cell in row.cells %}
+                    <td class="p-2">
+                        {% if cell.lesson %}
+                        <div class="fw-bold small">{{ cell.lesson.subject }}</div>
+                        <div class="small text-muted">
+                            {% if show_class %}
+                            <i class="bi bi-building"></i> {{ cell.lesson.version.school_class }}
+                            {% else %}
+                            <i class="bi bi-person"></i> {{ cell.lesson.teacher.get_full_name }}
+                            {% endif %}
+                        </div>
+                        <div class="small text-muted">
+                            <i class="bi bi-door-closed"></i> {{ cell.lesson.room }}
+                        </div>
+                        {% else %}
+                        <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        Няма публикувано разписание.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

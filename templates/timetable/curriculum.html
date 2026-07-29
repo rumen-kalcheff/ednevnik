@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% block title %}Седмичен хорариум{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-list-ol"></i> Седмичен хорариум
+        <span class="badge bg-secondary ms-2">{{ year }}</span>
+    </h4>
+    <a href="{% url 'timetable_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Назад
+    </a>
+</div>
+
+<form method="get" class="card card-body shadow-sm mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small mb-1">Клас</label>
+            <select name="class" class="form-select" onchange="this.form.submit()">
+                {% for c in classes %}
+                <option value="{{ c.pk }}" {% if school_class.pk == c.pk %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small mb-1">Учебна година</label>
+            <select name="year" class="form-select" onchange="this.form.submit()">
+                {% for y in years %}
+                <option value="{{ y.pk }}" {% if year.pk == y.pk %}selected{% endif %}>{{ y.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</form>
+
+{% if school_class %}
+{% if setting %}
+<p class="small text-muted">
+    Смяна: <strong>{{ setting.shift }}</strong> &nbsp;|&nbsp;
+    Първи чужд език: <strong>{{ setting.first_language|default:'—' }}</strong> &nbsp;|&nbsp;
+    Втори чужд език: <strong>{{ setting.second_language|default:'—' }}</strong>
+</p>
+{% else %}
+<div class="alert alert-warning small">
+    Клас {{ school_class }} няма зададена смяна за {{ year }}.
+    <a href="{% url 'timetable_class_settings' %}" class="alert-link">Задайте я тук</a>.
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-md-7">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-journal-bookmark"></i> Хорариум на клас {{ school_class }}</span>
+                <span class="badge bg-primary">Общо {{ total_hours }} часа седмично</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Предмет</th>
+                            <th class="text-center">Часове седмично</th>
+                            <th class="text-center">Поставени в разписанието</th>
+                            <th class="text-end">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in entries %}
+                        <tr>
+                            <td>
+                                {{ row.entry.subject }}
+                                {% if row.entry.subject.is_foreign_language %}
+                                <span class="badge bg-light text-dark">чужд език</span>
+                                {% endif %}
+                                {% if setting.first_language_id == row.entry.subject_id %}
+                                <span class="badge bg-info">първи</span>
+                                {% elif setting.second_language_id == row.entry.subject_id %}
+                                <span class="badge bg-secondary">втори</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center fw-bold">{{ row.entry.hours_per_week }}</td>
+                            <td class="text-center">
+                                {% if row.placed == row.entry.hours_per_week %}
+                                <span class="badge bg-success">{{ row.placed }}</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">{{ row.placed }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-danger"
+                                        form="del-{{ row.entry.pk }}"
+                                        onclick="return confirm('Да се премахне ли {{ row.entry.subject }} от хорариума?');">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center text-muted py-4">
+                            Няма зададен хорариум за този клас.
+                        </td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% for row in entries %}
+        <form method="post" id="del-{{ row.entry.pk }}" class="d-none">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="entry" value="{{ row.entry.pk }}">
+            <input type="hidden" name="school_class" value="{{ school_class.pk }}">
+            <input type="hidden" name="year" value="{{ year.pk }}">
+        </form>
+        {% endfor %}
+    </div>
+
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header"><i class="bi bi-plus-circle"></i> Добави или промени предмет</div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="school_class" value="{{ school_class.pk }}">
+                    <input type="hidden" name="year" value="{{ year.pk }}">
+                    <div class="mb-3">
+                        <label class="form-label">Предмет</label>
+                        <select name="subject" class="form-select" required>
+                            <option value="">-- Избери предмет --</option>
+                            {% for subject in subjects %}
+                            <option value="{{ subject.pk }}">
+                                {{ subject.name }}{% if subject.is_foreign_language %} (чужд език){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            Показват се само предмети с назначен преподавател за този клас.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Часове седмично</label>
+                        <input type="number" name="hours_per_week" min="1" max="20"
+                               class="form-control" required>
+                    </div>
+                    <button class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Запази
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

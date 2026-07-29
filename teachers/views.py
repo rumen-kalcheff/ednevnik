@@ -731,6 +731,138 @@ def student_contacts(request):
     })
 
 
+# ── Учебно разписание ─────────────────────────────────────────
+
+@role_required('teacher')
+def schedule(request):
+    """Собственото седмично разписание на учителя — класове, зали и
+    заместванията за деня."""
+    from timetable import services
+    from timetable.models import SchoolYear
+
+    year = SchoolYear.current()
+    today = date.today()
+    rows = services.teacher_week_grid(year, request.user) if year else []
+    today_rows = services.lessons_on_date(year, today, teacher=request.user) if year else []
+
+    return render(request, 'teachers/schedule.html', {
+        'year': year, 'rows': rows, 'today': today, 'today_rows': today_rows,
+        'days': [(day, services.DAY_NAMES[day]) for day in services.DAYS],
+        'lesson_count': sum(1 for row in rows for cell in row['cells'] if cell['lesson']),
+    })
+
+
+@role_required('teacher')
+def lesson_topics(request):
+    """Тема на урока за конкретна календарна дата — само за часовете, по които
+    учителят е основен преподавател или назначен заместник."""
+    import datetime
+    from timetable import services
+    from timetable.models import LessonTopic, SchoolYear
+
+    year = SchoolYear.current()
+    raw_date = request.GET.get('date') or request.POST.get('date')
+    try:
+        day = datetime.date.fromisoformat(raw_date) if raw_date else date.today()
+    except ValueError:
+        day = date.today()
+
+    if request.method == 'POST':
+        from school.models import Class
+        from timetable.models import Period
+
+        school_class = get_object_or_404(Class, pk=request.POST.get('school_class'))
+        period = get_object_or_404(Period, pk=request.POST.get('period'))
+        topic_text = request.POST.get('topic', '').strip()
+
+        lesson = services.can_teach_on_date(request.user, school_class, period, day)
+        if day > date.today():
+            messages.error(request, 'Датата не може да бъде в бъдещето.')
+        elif lesson is None:
+            messages.error(request, 'Можете да въвеждате тема само за свои часове за тази дата.')
+        elif not topic_text:
+            LessonTopic.objects.filter(
+                date=day, school_class=school_class, period=period).delete()
+            messages.success(request, 'Темата е премахната.')
+        else:
+            LessonTopic.objects.update_or_create(
+                date=day, school_class=school_class, period=period,
+                defaults={'subject': lesson.subject, 'teacher': request.user,
+                          'topic': topic_text,
+                          'note': request.POST.get('note', '').strip()},
+            )
+            messages.success(request, 'Темата на урока е записана.')
+        return redirect(f"{request.path}?date={day.isoformat()}")
+
+    rows = []
+    if year:
+        topics = {
+            (topic.school_class_id, topic.period_id): topic
+            for topic in LessonTopic.objects.filter(date=day)
+        }
+        for row in services.lessons_on_date(year, day, teacher=request.user):
+            if row['is_cancelled'] or row['teacher'] != request.user:
+                continue
+            row['topic'] = topics.get(
+                (row['lesson'].version.school_class_id, row['lesson'].period_id))
+            row['is_substitute'] = row['lesson'].teacher_id != request.user.pk
+            rows.append(row)
+
+    return render(request, 'teachers/lesson_topics.html', {
+        'date': day, 'rows': rows, 'today': date.today(),
+        'is_weekend': day.isoweekday() not in services.DAYS,
+    })
+
+
+@role_required('teacher')
+def my_absences(request):
+    """Учителят регистрира собствено отсъствие — то се потвърждава от администратор."""
+    import datetime
+    from timetable.models import TeacherAbsence
+
+    if request.method == 'POST':
+        try:
+            start = datetime.date.fromisoformat(request.POST.get('start_date'))
+            end = datetime.date.fromisoformat(request.POST.get('end_date'))
+        except (TypeError, ValueError):
+            messages.error(request, 'Въведете валидни дати.')
+            return redirect('teacher_my_absences')
+
+        if end < start:
+            messages.error(request, 'Крайната дата не може да е преди началната.')
+        else:
+            TeacherAbsence.objects.create(
+                teacher=request.user, start_date=start, end_date=end,
+                reason=request.POST.get('reason', '').strip(),
+                status=TeacherAbsence.PENDING, created_by=request.user,
+            )
+            messages.success(
+                request, 'Отсъствието е заявено и очаква потвърждение от администратор.')
+        return redirect('teacher_my_absences')
+
+    return render(request, 'teachers/my_absences.html', {
+        'absences': TeacherAbsence.objects.filter(teacher=request.user),
+        'today': date.today(),
+    })
+
+
+@role_required('teacher')
+def my_substitutions(request):
+    """Заместванията, възложени на учителя."""
+    from timetable.models import Substitution
+
+    substitutions = Substitution.objects.filter(
+        substitute_teacher=request.user, is_cancelled=False,
+    ).select_related('school_class', 'period', 'subject', 'original_teacher', 'room')
+
+    today = date.today()
+    return render(request, 'teachers/substitutions.html', {
+        'upcoming': [s for s in substitutions if s.date >= today],
+        'past': [s for s in substitutions if s.date < today],
+        'today': today,
+    })
+
+
 # ── AJAX: ученици по клас ─────────────────────────────────────
 
 from django.http import JsonResponse

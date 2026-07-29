@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}Отсъствия на преподаватели{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-person-x"></i> Отсъствия на преподаватели</h4>
+    <a href="{% url 'timetable_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Назад
+    </a>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-header"><i class="bi bi-plus-circle"></i> Регистрирай отсъствие</div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Преподавател</label>
+                        <select name="teacher" class="form-select" required>
+                            <option value="">-- Избери преподавател --</option>
+                            {% for t in teachers %}
+                            <option value="{{ t.pk }}">{{ t.get_full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Начална дата</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Крайна дата</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Причина <small class="text-muted">(незадължително)</small></label>
+                        <input type="text" name="reason" class="form-control" maxlength="200">
+                    </div>
+                    <button class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Регистрирай
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <form method="get" class="card card-body shadow-sm mb-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label small mb-1">Статус</label>
+                    <select name="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Всички --</option>
+                        {% for value, label in statuses %}
+                        <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </form>
+
+        <div class="card shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Преподавател</th>
+                            <th>Период</th>
+                            <th>Причина</th>
+                            <th>Статус</th>
+                            <th class="text-end">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for absence in absences %}
+                        <tr>
+                            <td>{{ absence.teacher.get_full_name }}</td>
+                            <td class="small">
+                                {{ absence.start_date|date:'d.m.Y' }} – {{ absence.end_date|date:'d.m.Y' }}
+                            </td>
+                            <td class="small">{{ absence.reason|default:'—' }}</td>
+                            <td>
+                                {% if absence.status == 'approved' %}
+                                <span class="badge bg-success">{{ absence.get_status_display }}</span>
+                                {% elif absence.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">{{ absence.get_status_display }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ absence.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end text-nowrap">
+                                <a href="{% url 'teacher_absence_affected' absence.pk %}"
+                                   class="btn btn-sm btn-outline-primary" title="Засегнати часове">
+                                    <i class="bi bi-calendar-week"></i>
+                                </a>
+                                {% if absence.status != 'approved' %}
+                                <button class="btn btn-sm btn-outline-success" form="approve-{{ absence.pk }}"
+                                        title="Потвърди">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                                {% endif %}
+                                {% if absence.status != 'rejected' %}
+                                <button class="btn btn-sm btn-outline-secondary" form="reject-{{ absence.pk }}"
+                                        title="Откажи">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                                {% endif %}
+                                <a href="{% url 'teacher_absence_delete' absence.pk %}"
+                                   class="btn btn-sm btn-outline-danger" title="Изтрий">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center text-muted py-4">Няма регистрирани отсъствия.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% for absence in absences %}
+<form method="post" action="{% url 'teacher_absence_status' absence.pk %}" id="approve-{{ absence.pk }}" class="d-none">
+    {% csrf_token %}<input type="hidden" name="status" value="approved">
+</form>
+<form method="post" action="{% url 'teacher_absence_status' absence.pk %}" id="reject-{{ absence.pk }}" class="d-none">
+    {% csrf_token %}<input type="hidden" name="status" value="rejected">
+</form>
+{% endfor %}
+{% endblock %}

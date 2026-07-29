@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}Смени и чужди езици по класове{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-sliders"></i> Смени и чужди езици по класове
+        <span class="badge bg-secondary ms-2">{{ year }}</span>
+    </h4>
+    <a href="{% url 'timetable_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Назад
+    </a>
+</div>
+
+<div class="alert alert-info small">
+    <i class="bi bi-info-circle"></i>
+    Разпределението по смени и изучаваните чужди езици се задават тук — за всеки клас
+    и за всяка учебна година поотделно. Всеки клас изучава точно два чужди езика,
+    като първият трябва да е с повече часове седмично от втория.
+</div>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Клас</th>
+                    <th style="width:22%;">Смяна</th>
+                    <th style="width:24%;">Първи чужд език</th>
+                    <th style="width:24%;">Втори чужд език</th>
+                    <th class="text-end">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td class="fw-bold">{{ row.school_class }}</td>
+                    <td>
+                        <select name="shift" form="cs-{{ row.school_class.pk }}"
+                                class="form-select form-select-sm" required>
+                            {% for shift in shifts %}
+                            <option value="{{ shift.pk }}"
+                                {% if row.setting.shift_id == shift.pk %}selected{% endif %}>
+                                {{ shift.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <select name="first_language" form="cs-{{ row.school_class.pk }}"
+                                class="form-select form-select-sm">
+                            <option value="">— не е избран —</option>
+                            {% for language in languages %}
+                            <option value="{{ language.pk }}"
+                                {% if row.setting.first_language_id == language.pk %}selected{% endif %}>
+                                {{ language.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <select name="second_language" form="cs-{{ row.school_class.pk }}"
+                                class="form-select form-select-sm">
+                            <option value="">— не е избран —</option>
+                            {% for language in languages %}
+                            <option value="{{ language.pk }}"
+                                {% if row.setting.second_language_id == language.pk %}selected{% endif %}>
+                                {{ language.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-primary" form="cs-{{ row.school_class.pk }}">
+                            <i class="bi bi-check-lg"></i> Запази
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">Няма създадени класове.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% for row in rows %}
+<form method="post" id="cs-{{ row.school_class.pk }}" class="d-none">
+    {% csrf_token %}
+    <input type="hidden" name="school_class" value="{{ row.school_class.pk }}">
+    <input type="hidden" name="year" value="{{ year.pk }}">
+</form>
+{% endfor %}
+
+<p class="text-muted small mt-2">
+    <i class="bi bi-lightbulb"></i>
+    Списъкът с езици идва от предметите, отбелязани като „чужд език“ в
+    <a href="{% url 'subject_list' %}">управлението на предметите</a>.
+</p>
+{% endblock %}
