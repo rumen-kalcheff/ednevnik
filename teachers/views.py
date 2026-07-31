@@ -17,6 +17,38 @@ def _teacher_assignments(user):
     return TeacherClassSubject.objects.filter(teacher=user).select_related('school_class', 'subject')
 
 
+def _teacher_class_subject_options(user, day):
+    """(клас, предмет) двойки, за които учителят може да въвежда отсъствия на `day`:
+    постоянните му назначения (освен ако е изцяло заместен за деня по този клас/предмет)
+    плюс часовете, в които е назначен заместник за деня."""
+    from timetable import services
+    from timetable.models import Lesson, SchoolYear, TimetableVersion
+
+    day_of_week = day.isoweekday()
+    options = {}
+    for a in _teacher_assignments(user):
+        lessons_today = Lesson.objects.filter(
+            version__school_class=a.school_class, version__status=TimetableVersion.PUBLISHED,
+            day_of_week=day_of_week, subject=a.subject, teacher=user,
+        )
+        if lessons_today.exists() and not any(
+            services.can_teach_on_date(user, a.school_class, lesson.period, day) is not None
+            for lesson in lessons_today
+        ):
+            continue
+        options[(a.school_class_id, a.subject_id)] = (a.school_class, a.subject)
+
+    year = SchoolYear.current()
+    if year:
+        for row in services.lessons_on_date(year, day, teacher=user):
+            if row['is_cancelled'] or row['teacher'] != user:
+                continue
+            lesson = row['lesson']
+            key = (lesson.version.school_class_id, lesson.subject_id)
+            options.setdefault(key, (lesson.version.school_class, lesson.subject))
+    return options
+
+
 def _homeroom_class(user):
     """Класът, на който потребителят е класен ръководител, или None."""
     from school.models import Class
@@ -323,10 +355,6 @@ def absence_list(request):
 
 @role_required('teacher')
 def absence_add(request):
-    assignments = _teacher_assignments(request.user)
-    classes = list({a.school_class for a in assignments})
-    subjects = list({a.subject for a in assignments})
-
     if request.method == 'POST':
         student_ids = request.POST.getlist('students')
         subject_id = request.POST.get('subject')
@@ -339,8 +367,16 @@ def absence_add(request):
         else:
             absence_date_obj = absence_date
 
+        options = _teacher_class_subject_options(request.user, absence_date_obj)
+        students = StudentProfile.objects.filter(pk__in=student_ids).select_related('school_class')
+
         if absence_date_obj > date.today():
             messages.error(request, 'Датата не може да бъде в бъдещето.')
+        elif not subject_id or not students or any(
+            (s.school_class_id, int(subject_id)) not in options for s in students
+        ):
+            messages.error(
+                request, 'Нямате право да въвеждате отсъствия за този клас по избрания предмет на тази дата.')
         else:
             from school.models import Subject
             from students.models import ParentProfile
@@ -381,10 +417,20 @@ def absence_add(request):
             messages.success(request, 'Отсъствията са записани.')
             return redirect('absence_list')
 
+    today = date.today()
+    try:
+        initial_date = date.fromisoformat(request.GET.get('date', '')) if request.GET.get('date') else today
+    except ValueError:
+        initial_date = today
+    if initial_date > today:
+        initial_date = today
+
     return render(request, 'teachers/absence_form.html', {
-        'classes': classes, 'subjects': subjects,
         'absence_types': Absence.ABSENCE_TYPE_CHOICES,
-        'today': date.today(),
+        'today': today,
+        'initial_date': initial_date,
+        'initial_class_id': request.GET.get('class_id', ''),
+        'initial_subject_id': request.GET.get('subject_id', ''),
     })
 
 
@@ -776,9 +822,7 @@ def lesson_topics(request):
         topic_text = request.POST.get('topic', '').strip()
 
         lesson = services.can_teach_on_date(request.user, school_class, period, day)
-        if day > date.today():
-            messages.error(request, 'Датата не може да бъде в бъдещето.')
-        elif lesson is None:
+        if lesson is None:
             messages.error(request, 'Можете да въвеждате тема само за свои часове за тази дата.')
         elif not topic_text:
             LessonTopic.objects.filter(
@@ -874,3 +918,27 @@ def students_by_class(request):
     ).select_related('user').order_by('user__first_name', 'user__last_name')
     data = [{'id': s.pk, 'name': s.user.get_full_name()} for s in students]
     return JsonResponse(data, safe=False)
+
+
+@role_required('teacher')
+def class_subjects_by_date(request):
+    """Класовете и предметите, за които учителят може да въвежда отсъствия на
+    подадената дата — постоянните му назначения плюс заместванията за деня."""
+    import datetime
+
+    raw_date = request.GET.get('date')
+    try:
+        day = datetime.date.fromisoformat(raw_date) if raw_date else date.today()
+    except ValueError:
+        day = date.today()
+
+    options = _teacher_class_subject_options(request.user, day)
+    classes = sorted({c for c, s in options.values()}, key=lambda c: c.name)
+    data = {
+        'classes': [{'id': c.pk, 'name': c.name} for c in classes],
+        'pairs': [
+            {'class_id': cid, 'subject_id': sid, 'subject_name': s.name}
+            for (cid, sid), (c, s) in options.items()
+        ],
+    }
+    return JsonResponse(data)

@@ -168,9 +168,9 @@ def statistics(request):
 @role_required('student')
 def schedule(request):
     """Публикуваното разписание на класа на ученика."""
-    from datetime import date
+    from datetime import date, timedelta
     from timetable import services
-    from timetable.models import SchoolYear
+    from timetable.models import LessonTopic, SchoolYear
 
     profile = request.user.student_profile
     school_class = profile.school_class
@@ -183,6 +183,21 @@ def schedule(request):
         setting = services.class_setting(year, school_class)
         version = services.published_version(year, school_class)
         rows = services.week_grid(version, services.class_periods(year, school_class))
+
+        monday = date.today() - timedelta(days=date.today().isoweekday() - 1)
+        week_dates = {day: monday + timedelta(days=day - 1) for day in services.DAYS}
+        topics = {
+            (topic.period_id, topic.date.isoweekday()): topic
+            for topic in LessonTopic.objects.filter(
+                school_class=school_class,
+                date__range=(week_dates[services.DAYS[0]], week_dates[services.DAYS[-1]]),
+            )
+        }
+        for row in rows:
+            for cell in row['cells']:
+                cell['date'] = week_dates[cell['day']]
+                cell['topic'] = topics.get((row['period'].pk, cell['day']))
+
         today_changes = [
             row for row in services.lessons_on_date(
                 year, date.today(), school_class=school_class)

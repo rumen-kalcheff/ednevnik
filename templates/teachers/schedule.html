@@ -33,16 +33,24 @@
                 &nbsp; {{ row.lesson.subject }} — {{ row.lesson.version.school_class }}
                 <span class="text-muted small">({{ row.lesson.room }})</span>
             </span>
-            <span>
+            <span class="d-flex align-items-center gap-2">
                 {% if row.is_cancelled %}
                 <span class="badge bg-danger">Отменен час</span>
-                {% elif row.substitution and row.substitution.substitute_teacher %}
-                    {% if row.substitution.substitute_teacher == user %}
-                    <span class="badge bg-info">Заместване</span>
-                    {% else %}
-                    <span class="badge bg-secondary">
-                        Замества: {{ row.substitution.substitute_teacher.get_full_name }}
-                    </span>
+                {% else %}
+                    {% if row.substitution and row.substitution.substitute_teacher %}
+                        {% if row.substitution.substitute_teacher == user %}
+                        <span class="badge bg-info">Заместване</span>
+                        {% else %}
+                        <span class="badge bg-secondary">
+                            Замества: {{ row.substitution.substitute_teacher.get_full_name }}
+                        </span>
+                        {% endif %}
+                    {% endif %}
+                    {% if row.teacher == user %}
+                    <a class="btn btn-outline-danger btn-sm"
+                       href="{% url 'absence_add' %}?date={{ today|date:'Y-m-d' }}&class_id={{ row.lesson.version.school_class_id }}&subject_id={{ row.lesson.subject_id }}">
+                        <i class="bi bi-calendar-x"></i> Отсъствия
+                    </a>
                     {% endif %}
                 {% endif %}
             </span>

@@ -36,6 +36,11 @@
                         <div class="small text-muted">
                             <i class="bi bi-door-closed"></i> {{ cell.lesson.room }}
                         </div>
+                        {% if cell.topic %}
+                        <div class="small text-primary mt-1">
+                            <i class="bi bi-journal-text"></i> {{ cell.topic.topic }}
+                        </div>
+                        {% endif %}
                         {% else %}
                         <span class="text-muted small">—</span>
                         {% endif %}

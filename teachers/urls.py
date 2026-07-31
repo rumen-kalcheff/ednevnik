@@ -36,4 +36,5 @@ urlpatterns = [
     path('student-contacts/', views.student_contacts, name='student_contacts'),
     # AJAX
     path('api/students-by-class/', views.students_by_class, name='students_by_class'),
+    path('api/class-subjects-by-date/', views.class_subjects_by_date, name='class_subjects_by_date'),
 ]
