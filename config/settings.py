@@ -1,5 +1,6 @@
 from pathlib import Path
 from decouple import config
+from django.contrib.messages import constants as message_constants
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -99,6 +100,12 @@ AUTH_USER_MODEL = 'accounts.User'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/login/'
+
+# Django нарича нивото "error", а Bootstrap няма alert-error, само alert-danger —
+# без тази замяна съобщенията от messages.error() излизат нестилизирани.
+MESSAGE_TAGS = {
+    message_constants.ERROR: 'danger',
+}
 
 # Имейл — настройките идват от .env
 EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')

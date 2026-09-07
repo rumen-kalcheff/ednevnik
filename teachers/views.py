@@ -18,27 +18,28 @@ def _teacher_assignments(user):
 
 
 def _teacher_class_subject_options(user, day):
-    """(клас, предмет) двойки, за които учителят може да въвежда отсъствия на `day`:
-    постоянните му назначения (освен ако е изцяло заместен за деня по този клас/предмет)
-    плюс часовете, в които е назначен заместник за деня."""
-    from timetable import services
-    from timetable.models import Lesson, SchoolYear, TimetableVersion
+    """(клас, предмет) двойки, за които учителят може да въвежда отсъствия на `day`.
 
-    day_of_week = day.isoweekday()
-    options = {}
-    for a in _teacher_assignments(user):
-        lessons_today = Lesson.objects.filter(
-            version__school_class=a.school_class, version__status=TimetableVersion.PUBLISHED,
-            day_of_week=day_of_week, subject=a.subject, teacher=user,
-        )
-        if lessons_today.exists() and not any(
-            services.can_teach_on_date(user, a.school_class, lesson.period, day) is not None
-            for lesson in lessons_today
-        ):
-            continue
-        options[(a.school_class_id, a.subject_id)] = (a.school_class, a.subject)
+    За класове с публикувано разписание се разрешават само реални часове на
+    учителя за тази дата (вкл. часове, в които е назначен заместник за деня;
+    отменените часове и тези, от които е свален чрез заместване, отпадат).
+    За класове без въведено разписание (няма данни за проверка) се разрешават
+    постоянните му назначения без ограничение по дата."""
+    from timetable import services
+    from timetable.models import SchoolYear, TimetableVersion
 
     year = SchoolYear.current()
+    scheduled_class_ids = set(
+        TimetableVersion.objects.filter(
+            school_year=year, status=TimetableVersion.PUBLISHED,
+        ).values_list('school_class_id', flat=True)
+    ) if year else set()
+
+    options = {}
+    for a in _teacher_assignments(user):
+        if a.school_class_id not in scheduled_class_ids:
+            options[(a.school_class_id, a.subject_id)] = (a.school_class, a.subject)
+
     if year:
         for row in services.lessons_on_date(year, day, teacher=user):
             if row['is_cancelled'] or row['teacher'] != user:

@@ -12,12 +12,6 @@
                 </h4>
                 <h6 class="text-center text-muted mb-4">Вход в системата</h6>
 
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-danger">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-
                 <form method="post">
                     {% csrf_token %}
                     <div class="mb-3">
