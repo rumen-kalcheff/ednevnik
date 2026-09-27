@@ -22,13 +22,8 @@ def resolve_period(request):
 
 
 def group_grades_by_subject(grades):
-    """Групира оценки на един ученик по предмет.
+    """Групира оценки на един ученик по предмет."""
 
-    Връща списък от секции, подредени по име на предмет:
-        [{'subject', 'teacher_names', 'grades' (текущи, по реда на добавяне),
-          'finals' {grade_type: Grade}}]
-    `grades` трябва да е iterable от Grade със select_related('subject', 'teacher').
-    """
     by_subject = {}
     for g in grades:
         entry = by_subject.setdefault(g.subject_id, {

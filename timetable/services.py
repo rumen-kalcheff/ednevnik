@@ -541,16 +541,8 @@ def check_substitute(school_year, day_date, period, substitute,
 
 def notify_lesson_change(lesson, day_date, kind, substitute_teacher=None, note=''):
     """Известява по имейл учениците и родителите от засегнатия клас при
-    отмяна на час или назначаване на заместник за конкретна дата.
+    отмяна на час или назначаване на заместник за конкретна дата."""
 
-    `kind` е 'cancelled' или 'substituted'. Текстът е един и същ за целия
-    клас, затова се изпраща едно писмо с всички получатели в BCC — не по
-    едно писмо на всеки ученик. Изпращане по едно писмо на получател
-    отваря отделна SMTP връзка всеки път (MAIL FROM/RCPT TO/DATA), което
-    при клас с 25+ ученика отнема над 20 секунди в самата HTTP заявка;
-    едно писмо с всички в BCC отнема около 2 секунди. BCC пази имейлите
-    на семействата скрити едно от друго.
-    """
     from django.core.mail import EmailMessage
     from django.conf import settings
     from students.models import StudentProfile
