@@ -119,6 +119,9 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
 # недостъпен SMTP може да блокира заявката за неограничено време.
 EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=10, cast=int)
 
+# Линкът за възстановяване на парола е валиден 24 часа (по подразбиране в Django е 3 дни)
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 24
+
 # Автоматично прекъсване на сесия след 2 часа неактивност (НФИ4)
 SESSION_COOKIE_AGE = 7200
 SESSION_SAVE_EVERY_REQUEST = True
