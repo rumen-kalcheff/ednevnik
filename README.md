@@ -1,4 +1,4 @@
-# eDnevnik – School E-Gradebook & Timetable System
+# EduNova – School E-Gradebook & Timetable System
 
 eDnevnik is a web-based electronic gradebook for Bulgarian secondary schools. Administrators, teachers, students and parents each get their own view of grades, absences, the weekly timetable and learning materials. I built it as my diploma thesis at the Technical University of Sofia (Computer and Software Engineering, 2026).
 
