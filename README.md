@@ -1,6 +1,6 @@
 # EduNova – School E-Gradebook & Timetable System
 
-EduNova is a web-based electronic gradebook for Bulgarian secondary schools. Administrators, teachers, students and parents each get their own view of grades, absences, the weekly timetable and learning materials. I built it as my diploma thesis at the Technical University of Sofia (Computer and Software Engineering, 2026).
+EduNova is a web-based electronic gradebook for Bulgarian secondary schools. Administrators, teachers, students and parents each get their own view of grades, absences, the weekly timetable and learning materials.
 
 **Tech stack:** Python · Django · PostgreSQL · Bootstrap 5 · Chart.js
 <br>The user interface is in Bulgarian.
